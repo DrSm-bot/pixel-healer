@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f0f23;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #312f81;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #423bca;
+}
+
+/* Range input styling */
+input[type='range'] {
+  @apply appearance-none bg-cosmos-800 h-2 rounded-full;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  @apply appearance-none w-4 h-4 bg-cosmos-500 rounded-full cursor-pointer;
+}
+
+input[type='range']::-moz-range-thumb {
+  @apply w-4 h-4 bg-cosmos-500 rounded-full cursor-pointer border-0;
+}
+
+/* Focus styles */
+button:focus-visible,
+a:focus-visible {
+  @apply outline-none ring-2 ring-cosmos-500 ring-offset-2 ring-offset-cosmos-950;
+}
