@@ -43,7 +43,20 @@ export function detectHotPixels(
 
   const pixelCount = width * height;
   const frameCount = frameResults.length;
-  const minHotFrames = Math.floor(frameCount * minConsistency);
+
+  if (frameCount === 0 || pixelCount === 0) {
+    return {
+      pixels: new Set<number>(),
+      details: [],
+      threshold,
+      minConsistency,
+      width,
+      height,
+      framesAnalyzed: frameCount,
+    };
+  }
+
+  const minHotFrames = Math.max(1, Math.floor(frameCount * minConsistency));
 
   // Sum up hot counts across all frames
   const hotCounts = new Uint16Array(pixelCount);

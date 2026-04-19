@@ -40,6 +40,11 @@ export function AnalysisView() {
 
     try {
       const sampleCount = Math.min(detectionOptions.sampleFrames ?? 10, inputFiles.length);
+
+      if (sampleCount === 0) {
+        throw new Error('No input files available for analysis. Please select a folder first.');
+      }
+
       const sampleIndices = selectSampleFrames(inputFiles.length, sampleCount);
 
       const frameResults: Uint8Array[] = [];
@@ -78,7 +83,10 @@ export function AnalysisView() {
       if (firstImageData) {
         const overlay = createHotPixelOverlay(firstImageData, hotPixelMap.pixels);
         const url = await imageDataToDataUrl(overlay);
-        setPreviewUrl(url);
+        setPreviewUrl((prev) => {
+          if (prev) revokeDataUrl(prev);
+          return url;
+        });
       }
 
       setProgress(null);
