@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { ImageFile, SupportedExtension } from '@/types';
 
-const SUPPORTED_EXTENSIONS: SupportedExtension[] = ['.jpg', '.jpeg', '.png', '.webp'];
+const SUPPORTED_EXTENSIONS: SupportedExtension[] = ['.jpg', '.jpeg', '.png'];
 
 function isSupportedImage(filename: string): boolean {
   const lower = filename.toLowerCase();

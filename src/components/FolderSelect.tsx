@@ -16,7 +16,7 @@ export function FolderSelect() {
         } else {
           setError({
             message: 'No supported images found',
-            details: 'The folder must contain JPG, JPEG, PNG, or WebP files.',
+            details: 'The folder must contain JPG, JPEG, or PNG files.',
             recoverable: true,
           });
         }
@@ -82,7 +82,7 @@ export function FolderSelect() {
 
         <div className="mt-12 text-sm text-gray-500">
           <p>✓ 100% local processing — your images never leave your computer</p>
-          <p>✓ Supports JPG, PNG, WebP formats</p>
+          <p>✓ Supports JPG, JPEG, PNG formats</p>
           <p>✓ Works with sequences of 500+ images</p>
         </div>
       </div>

@@ -9,7 +9,7 @@
 /**
  * Supported image file extensions
  */
-export type SupportedExtension = '.jpg' | '.jpeg' | '.png' | '.webp';
+export type SupportedExtension = '.jpg' | '.jpeg' | '.png';
 
 /**
  * Represents a single image file in the sequence
