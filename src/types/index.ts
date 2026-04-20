@@ -236,3 +236,71 @@ declare global {
     values(): AsyncIterableIterator<FileSystemHandle>;
   }
 }
+
+// ============================================================================
+// Synthetic Hot Pixel Generator Types (Dev Only)
+// ============================================================================
+
+/**
+ * Synthetic hot pixel for testing/evaluation
+ */
+export interface SyntheticHotPixel {
+  /** X coordinate (0-indexed) */
+  x: number;
+  /** Y coordinate (0-indexed) */
+  y: number;
+  /** Affected channel(s) */
+  channel: 'r' | 'g' | 'b' | 'rgb';
+  /** Pixel behavior class */
+  type: 'stuck' | 'warm' | 'flicker';
+  /** Intensity value (stuck: absolute 0-255, warm: additive offset) */
+  intensity: number;
+  /** Corrupt only when underlying value is below this threshold */
+  activationThreshold: number;
+  /** Per-frame manifestation probability for flicker pixels (0-1) */
+  flickerProbability: number;
+}
+
+/**
+ * Hot pixel mask with ground truth for evaluation
+ */
+export interface HotPixelMask {
+  /** Schema version for future compatibility */
+  schemaVersion: 1;
+  /** Image width in pixels */
+  width: number;
+  /** Image height in pixels */
+  height: number;
+  /** List of synthetic hot pixels */
+  pixels: SyntheticHotPixel[];
+  /** Random seed used for generation */
+  seed: number;
+  /** ISO timestamp of when mask was generated */
+  generatedAt: string;
+  /** Optional profile name used for generation */
+  profileName?: string;
+}
+
+/**
+ * Configuration for synthetic hot pixel mask generation
+ */
+export interface GeneratorConfig {
+  /** Image width in pixels */
+  width: number;
+  /** Image height in pixels */
+  height: number;
+  /** Random seed for deterministic generation */
+  seed: number;
+  /** Hot pixels per megapixel (default: 150) */
+  density: number;
+  /** Distribution of pixel types (must sum to 1.0) */
+  typeMix?: { stuck: number; warm: number; flicker: number };
+  /** Distribution of affected channels (must sum to 1.0) */
+  channelMix?: { r: number; g: number; b: number; rgb: number };
+  /** Mean intensity for warm pixels (default: 40) */
+  warmIntensityMean?: number;
+  /** Probability that stuck pixels have intensity=255 (default: 0.8) */
+  stuckIntensityMax255Prob?: number;
+  /** Range of flicker probabilities [min, max] (default: [0.3, 0.9]) */
+  flickerProbabilityRange?: [number, number];
+}
