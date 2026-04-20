@@ -2,7 +2,7 @@
 
 *Browser-based hot pixel removal for astrophotography time-lapses*
 
-Last updated: 2026-04-20
+Last updated: 2026-04-20 (Phase 3a planning update)
 
 ## Problem Statement
 
@@ -121,7 +121,15 @@ Provide a free, privacy-first web app that:
 - [x] Processing statistics + results view
 - [x] MIME/extension consistency
 
-### Phase 3: Review UX (next)
+### Phase 3a: Synthetic Benchmark Harness (next)
+- [ ] Dev-only synthetic hot-pixel generator (`src/dev/hotPixelGen/*`)
+- [ ] Deterministic seeded masks + fixture serialization (`schemaVersion: 1`)
+- [ ] Evaluation harness (precision/recall/F1 + PSNR/SSIM + runtime)
+- [ ] Baseline benchmark capture + CI regression gate
+- [ ] Hidden dev panel for qualitative inspection (`?dev=1` / shortcut)
+- [ ] Spec reference: `docs/SYNTHETIC_HOT_PIXEL_GENERATOR_SPEC.md`
+
+### Phase 3b: Review UX
 - [ ] Manual add/remove hot pixels (click to toggle)
 - [ ] Before/after comparison slider
 - [ ] Detection sensitivity tuning with live preview
