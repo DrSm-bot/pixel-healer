@@ -117,7 +117,20 @@ export function ProcessingView() {
       return;
     }
 
-    if (isOutputSameAsInput && !outputSettings.allowOverwrite) {
+    let sameDirNow = false;
+    try {
+      sameDirNow = await outputSettings.outputDir.isSameEntry(inputDir);
+      setIsOutputSameAsInput(sameDirNow);
+    } catch {
+      setError({
+        message: 'Failed to verify output directory',
+        details: 'Could not verify whether output directory matches input directory.',
+        recoverable: true,
+      });
+      return;
+    }
+
+    if (sameDirNow && !outputSettings.allowOverwrite) {
       setError({
         message: 'Overwrite confirmation required',
         details:
@@ -173,7 +186,7 @@ export function ProcessingView() {
           const { format, outputFileName } = getOutputFormat(file.name);
 
           // Save to output directory
-          if (outputSettings.allowOverwrite && isOutputSameAsInput) {
+          if (outputSettings.allowOverwrite && sameDirNow) {
             // Overwrite mode: save to original file handle
             await saveImageData(imageData, file.handle, format);
           } else if (outputSettings.outputDir) {
@@ -237,7 +250,6 @@ export function ProcessingView() {
     inputDir,
     hotPixelMap,
     outputSettings,
-    isOutputSameAsInput,
     loadImageData,
     saveImageData,
     saveImageToDirectory,
