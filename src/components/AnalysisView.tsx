@@ -25,11 +25,6 @@ export function AnalysisView() {
   // Determine if we're in review mode
   const isReviewStep = step === 'review';
 
-  // Debug log to trace the issue
-  useEffect(() => {
-    console.log('[AnalysisView] Current step:', step, 'isReviewStep:', isReviewStep);
-  }, [step, isReviewStep]);
-
   // Cleanup preview URL on unmount
   useEffect(() => {
     return () => {
@@ -244,7 +239,10 @@ export function AnalysisView() {
               >
                 {isAnalyzing ? (
                   <span className="flex items-center justify-center gap-2">
-                    <span className="animate-spin">⟳</span>
+                    <span
+                      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                      aria-hidden="true"
+                    />
                     Analyzing...
                   </span>
                 ) : (
