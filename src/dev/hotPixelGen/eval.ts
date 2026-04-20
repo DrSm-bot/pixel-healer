@@ -176,8 +176,6 @@ function buildGroupScores<T extends GroupKey>(
   groups: readonly T[]
 ): Record<T, EvalScore> {
   const result = {} as Record<T, EvalScore>;
-  const truth = buildTruthSet(mask);
-  const { falsePositives } = calculateConfusion(truth, detected);
 
   for (const group of groups) {
     const groupTruth = new Set(
@@ -185,7 +183,10 @@ function buildGroupScores<T extends GroupKey>(
         .filter((pixel) => pixel[field] === group)
         .map((pixel) => coordinateKey(pixel.x, pixel.y))
     );
-    const { truePositives, falseNegatives } = calculateGroupConfusion(groupTruth, detected);
+    const { truePositives, falsePositives, falseNegatives } = calculateGroupConfusion(
+      groupTruth,
+      detected
+    );
     result[group] = score(truePositives, falsePositives, falseNegatives);
   }
 
@@ -195,26 +196,33 @@ function buildGroupScores<T extends GroupKey>(
 function calculateGroupConfusion(
   groupTruth: Set<string>,
   detected: Set<string>
-): { truePositives: number; falseNegatives: number } {
+): { truePositives: number; falsePositives: number; falseNegatives: number } {
   let truePositives = 0;
-  let falseNegatives = 0;
 
   for (const key of groupTruth) {
     if (detected.has(key)) {
       truePositives++;
-    } else {
-      falseNegatives++;
     }
   }
 
-  return { truePositives, falseNegatives };
+  const falseNegatives = groupTruth.size - truePositives;
+
+  // Group-local precision should only be penalized by detections that target this group.
+  // With coordinate-only detection output, the only attributable detections for a group
+  // are coordinates within the group's truth set.
+  const detectedInGroup = truePositives;
+  const falsePositives = Math.max(0, detectedInGroup - truePositives);
+
+  return { truePositives, falsePositives, falseNegatives };
 }
 
 function calculateImageQuality(
   cleanFrames: ImageData[],
   healedFrames: ImageData[]
 ): { psnr: number; ssim: number; maxAbsError: number } {
-  let psnrSum = 0;
+  let psnrFiniteSum = 0;
+  let psnrFiniteCount = 0;
+  let psnrInfiniteCount = 0;
   let ssimSum = 0;
   let maxAbsError = 0;
 
@@ -225,13 +233,27 @@ function calculateImageQuality(
       throw new Error(`Frame ${i} is undefined`);
     }
 
-    psnrSum += calculatePsnr(clean, healed);
+    const framePsnr = calculatePsnr(clean, healed);
+    if (Number.isFinite(framePsnr)) {
+      psnrFiniteSum += framePsnr;
+      psnrFiniteCount++;
+    } else {
+      psnrInfiniteCount++;
+    }
+
     ssimSum += calculateSsim(clean, healed);
     maxAbsError = Math.max(maxAbsError, calculateMaxAbsError(clean, healed));
   }
 
+  const psnr =
+    psnrFiniteCount > 0
+      ? psnrFiniteSum / psnrFiniteCount
+      : psnrInfiniteCount > 0
+        ? Infinity
+        : 0;
+
   return {
-    psnr: psnrSum / cleanFrames.length,
+    psnr,
     ssim: ssimSum / cleanFrames.length,
     maxAbsError,
   };

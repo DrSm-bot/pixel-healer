@@ -54,15 +54,15 @@ describe('evaluate', () => {
     expect(report.f1).toBeCloseTo(2 / 3);
     expect(report.maxAbsErrorVsClean).toBeGreaterThan(0);
 
-    expect(report.perType.stuck.precision).toBeCloseTo(1 / 2);
+    expect(report.perType.stuck.precision).toBe(1);
     expect(report.perType.stuck.recall).toBe(1);
-    expect(report.perType.warm.precision).toBeCloseTo(1 / 2);
+    expect(report.perType.warm.precision).toBe(1);
     expect(report.perType.warm.recall).toBe(1);
-    expect(report.perType.flicker.precision).toBe(0);
+    expect(report.perType.flicker.precision).toBe(1);
     expect(report.perType.flicker.recall).toBe(0);
 
-    expect(report.perChannel.r.precision).toBeCloseTo(1 / 2);
-    expect(report.perChannel.g.precision).toBeCloseTo(1 / 2);
+    expect(report.perChannel.r.precision).toBe(1);
+    expect(report.perChannel.g.precision).toBe(1);
     expect(report.perChannel.b.recall).toBe(0);
   });
 
@@ -97,6 +97,25 @@ describe('evaluate', () => {
         heal: async () => [],
       })
     ).rejects.toThrow('Heal function returned 0 frames; expected 2');
+  });
+
+  it('averages PSNR over finite frames when sequence mixes perfect and imperfect heals', async () => {
+    const cleanFrames = createFrames(2, 6, 6, 20);
+    const mask = createMask();
+
+    const report = await evaluate({
+      cleanFrames,
+      mask,
+      detect: async () => new Set(mask.pixels.map((pixel) => `${pixel.x},${pixel.y}`)),
+      heal: async (frames) => {
+        const first = cloneImageData(cleanFrames[0]!);
+        const second = cloneImageData(frames[1]!); // imperfect on purpose
+        return [first, second];
+      },
+    });
+
+    expect(Number.isFinite(report.psnrVsClean)).toBe(true);
+    expect(report.psnrVsClean).toBeGreaterThan(0);
   });
 });
 
