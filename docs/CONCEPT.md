@@ -28,56 +28,75 @@ Provide a free, privacy-first web app that:
 
 ## Current Implementation Status
 
-### ✅ Done (Phase 0 + Phase 1)
+### ✅ Done (Phase 0 + Phase 1 + Phase 2)
 
+**Phase 0 — Project Setup:**
 - Vite + React 18 + TypeScript scaffold
-- Zustand store + Tailwind setup
+- Zustand store + Tailwind CSS setup
 - File System Access API hook integration
+- Cloudflare Pages deployment (pixel-healer.pages.dev)
+
+**Phase 1 — Filesystem + Analysis:**
 - Input folder selection
-- Supported file scan: **.jpg / .jpeg / .png**
+- Supported file scan: **.jpg / .jpeg / .png / .webp**
 - Deterministic filename sort (numeric-aware)
 - Analysis step UI + progress/error state
 - Sampling strategy (`selectSampleFrames`)
 - Decode sampled files to `ImageData`
 - Detection pipeline + hot-pixel map generation
-- Preview overlay rendering
-- Edge-case hardening:
-  - guard for empty analysis input
-  - robust detection behavior for empty frame/pixel sets
-  - preview URL cleanup on repeated runs
+- Preview overlay rendering (hot pixels highlighted in red)
+- Edge-case hardening (empty input guard, preview URL cleanup)
 
-### 🚧 In progress / next
+**Phase 2 — Processing + Export:**
+- Batch repair across all frames with progress indicator
+- Output folder selection (separate from input)
+- Same-directory safety check (`isSameEntry`)
+- Overwrite confirmation when input = output
+- Per-file error handling (continue on error, report failures)
+- MIME/extension consistency (format derived from filename)
+- Processing statistics (frames processed, pixels fixed, time, avg per frame)
+- Pause/Resume/Cancel controls
+- Results summary with "Process Another Folder" option
 
-- batch repair application across all frames
-- export/write pipeline for repaired images
-- richer review UI (manual pixel add/remove)
-- processing stats + before/after UX polish
+**UX Polish:**
+- Step indicator with progress checkmarks (all 5 steps)
+- Proper CSS spinner (no emoji wobble)
+- Individual Zustand selectors for reliable re-renders
+- Preview URL persistence across step transitions
 
-## Technical Architecture (current + intended)
+### 🚧 In Progress / Next
 
-- React UI + Zustand app state
-- Core algorithms in `src/core/*`
-- Worker entry in `src/workers/analyzer.worker.ts`
-- File IO through File System Access API (`src/hooks/useFileSystem.ts`)
+- Richer review UI (manual pixel add/remove)
+- Before/after comparison view
+- Web Worker parallelization for processing step
 
-### Detection model (implemented)
+## Technical Architecture
 
-- sample N frames from sequence
-- mark bright pixels per frame over threshold
-- aggregate consistency across sampled frames
-- classify as hot pixel when consistency >= `minConsistency`
+- **React UI** + Zustand app state
+- **Core algorithms** in `src/core/*` (detection, repair, image-utils)
+- **Worker entry** in `src/workers/analyzer.worker.ts` (Comlink-ready)
+- **File IO** through File System Access API (`src/hooks/useFileSystem.ts`)
 
-### Repair model (present as core util, full batch pipeline pending)
+### Detection Model (implemented)
 
-- repair by neighborhood interpolation around detected pixel coordinates
+1. Sample N frames from sequence (evenly distributed)
+2. For each pixel, count frames where brightness > threshold
+3. Pixels hot in >= `minConsistency` of frames = stuck pixels
+4. Stars move between frames → low consistency → not detected
 
-## User Flow (target)
+### Repair Model (implemented)
 
-1. Select input folder
-2. Analyze sample frames
-3. Review/adjust detections
-4. Process all images
-5. Export and summary
+- Replace hot pixel with average of 8 neighbors (3x3 kernel)
+- Skip pixels at image edges gracefully
+- Batch repair via `repairAllPixels()`
+
+## User Flow (current)
+
+1. **Select** — Pick input folder containing image sequence
+2. **Analyze** — Sample frames, detect hot pixels, show preview
+3. **Review** — See detection count, adjust if needed (basic)
+4. **Process** — Choose output folder, run batch repair with progress
+5. **Done** — View statistics, process another folder
 
 ## Development Phases
 
@@ -85,7 +104,7 @@ Provide a free, privacy-first web app that:
 - [x] Repo + baseline docs
 - [x] Vite + TS + React scaffold
 - [x] Basic app structure
-- [x] Cloudflare Pages deployment baseline
+- [x] Cloudflare Pages deployment
 
 ### Phase 1: Filesystem + Analysis ✅
 - [x] File System Access integration
@@ -94,25 +113,32 @@ Provide a free, privacy-first web app that:
 - [x] Hot pixel detection + preview integration
 - [x] Build/typecheck validation
 
-### Phase 2: Processing Pipeline (next)
-- [ ] Batch repair execution for full sequence
-- [ ] Output folder/write flow
-- [ ] Per-file progress + cancel safety
+### Phase 2: Processing Pipeline ✅
+- [x] Batch repair execution for full sequence
+- [x] Output folder selection + write flow
+- [x] Same-directory safety checks
+- [x] Per-file progress + cancel/pause
+- [x] Processing statistics + results view
+- [x] MIME/extension consistency
 
-### Phase 3: Review UX
-- [ ] Manual add/remove hot pixels
-- [ ] Before/after compare
-- [ ] Detection tuning UX improvements
+### Phase 3: Review UX (next)
+- [ ] Manual add/remove hot pixels (click to toggle)
+- [ ] Before/after comparison slider
+- [ ] Detection sensitivity tuning with live preview
+- [ ] Hot pixel list with coordinates
 
 ### Phase 4: Performance + Polish
 - [ ] Expand worker usage for processing step
-- [ ] Large-sequence throughput tuning
+- [ ] Large-sequence throughput tuning (1000+ frames)
+- [ ] Memory pressure monitoring
 - [ ] Browser fallback/error clarity
 
 ### Future
-- [ ] RAW format support (CR2/NEF/ARW/DNG)
+- [ ] RAW format support (CR2/NEF/ARW/DNG via WASM decoder)
+- [ ] Dark frame subtraction mode
+- [ ] Preset save/load
 
-## Current File Structure (actual)
+## Current File Structure
 
 ```text
 pixel-healer/
@@ -120,43 +146,64 @@ pixel-healer/
 │   └── CONCEPT.md
 ├── src/
 │   ├── components/
-│   │   ├── App.tsx
-│   │   ├── FolderSelect.tsx
-│   │   ├── AnalysisView.tsx
-│   │   ├── ProcessingView.tsx
-│   │   └── ResultsView.tsx
+│   │   ├── App.tsx           # Main app shell + routing
+│   │   ├── FolderSelect.tsx  # Step 1: Input selection
+│   │   ├── AnalysisView.tsx  # Steps 2+3: Analyze + Review
+│   │   ├── ProcessingView.tsx # Step 4: Batch processing
+│   │   └── ResultsView.tsx   # Step 5: Completion stats
 │   ├── workers/
-│   │   └── analyzer.worker.ts
+│   │   └── analyzer.worker.ts # Comlink worker (analysis)
 │   ├── core/
-│   │   ├── detection.ts
-│   │   ├── repair.ts
-│   │   └── image-utils.ts
+│   │   ├── detection.ts      # Hot pixel detection algorithm
+│   │   ├── repair.ts         # Pixel repair (neighbor avg)
+│   │   └── image-utils.ts    # Overlay, stats, data URLs
 │   ├── hooks/
-│   │   └── useFileSystem.ts
+│   │   └── useFileSystem.ts  # File System Access API wrapper
 │   ├── store/
-│   │   └── app-store.ts
+│   │   └── app-store.ts      # Zustand global state
 │   ├── types/
-│   │   └── index.ts
-│   ├── index.css
-│   └── main.tsx
+│   │   └── index.ts          # TypeScript definitions
+│   ├── index.css             # Tailwind + custom styles
+│   └── main.tsx              # Entry point
+├── public/
+│   └── favicon.svg
 ├── README.md
+├── CONTRIBUTING.md
+├── LICENSE
 ├── package.json
+├── tsconfig.json
+├── tailwind.config.js
 └── vite.config.ts
 ```
 
-## Deployment Notes (Cloudflare Pages)
+## Deployment (Cloudflare Pages)
 
-- Build command: `pnpm run build`
-- Output directory: `dist`
-- Install command: `pnpm install --frozen-lockfile`
-- Recommended Node: `22`
+- **URL:** https://pixel-healer.pages.dev
+- **Build command:** `pnpm run build`
+- **Output directory:** `dist`
+- **Install command:** `pnpm install --frozen-lockfile`
+- **Node version:** `22`
+- **Auto-deploy:** On push to `main`
 
-## Success Criteria (MVP)
+## Success Criteria (MVP) ✅
 
-MVP is considered done when users can:
+Users can:
+- [x] Select a folder of frames
+- [x] Detect hot pixels reliably
+- [x] Preview detections
+- [x] Run full-frame-stack repair/export
+- [x] Handle sequences without crashing
+- [x] See processing statistics
 
-- select a folder of frames,
-- detect hot pixels reliably,
-- preview detections,
-- run full-frame-stack repair/export,
-- handle large sequences without crashing.
+**MVP Status: COMPLETE** 🎉
+
+## PRs Merged
+
+| PR | Title | Status |
+|----|-------|--------|
+| #1 | Phase 0 Scaffold | ✅ Merged |
+| #2 | Phase 1: Filesystem + Analysis | ✅ Merged |
+| #3 | Fix: Review flow double-analyze bug | ✅ Merged |
+| #4 | Fix: Zustand selectors for re-render | ✅ Merged |
+| #5 | Phase 2: Processing + Export | ✅ Merged |
+| #6 | Fix: Spinner + Done checkmark cosmetics | ✅ Merged |
