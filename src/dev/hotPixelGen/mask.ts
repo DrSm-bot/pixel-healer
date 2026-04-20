@@ -31,9 +31,13 @@ export function generateMask(config: GeneratorConfig): HotPixelMask {
   const stuckIntensityMax255Prob = config.stuckIntensityMax255Prob ?? DEFAULTS.stuckIntensityMax255Prob;
   const flickerProbabilityRange = config.flickerProbabilityRange ?? DEFAULTS.flickerProbabilityRange;
 
+  if (config.width < 1 || config.height < 1) {
+    throw new Error('Invalid dimensions: width and height must be >= 1');
+  }
+
   // Calculate total number of hot pixels
   const megapixels = (config.width * config.height) / 1_000_000;
-  const totalPixels = Math.round(megapixels * density);
+  const requestedPixels = Math.max(0, Math.round(megapixels * density));
 
   // Build cumulative distribution arrays for sampling
   const typeWeights = buildCumulativeWeights([typeMix.stuck, typeMix.warm, typeMix.flicker]);
@@ -47,18 +51,22 @@ export function generateMask(config: GeneratorConfig): HotPixelMask {
   const pixels: SyntheticHotPixel[] = [];
   const usedPositions = new Set<string>();
 
-  // Avoid border pixels (edge pixels complicate interpolation in tests)
-  const minCoord = 2;
-  const maxX = config.width - 3;
-  const maxY = config.height - 3;
+  // Prefer interior pixels; gracefully relax for tiny frames
+  const minX = config.width > 2 ? 1 : 0;
+  const maxX = config.width > 2 ? config.width - 2 : config.width - 1;
+  const minY = config.height > 2 ? 1 : 0;
+  const maxY = config.height > 2 ? config.height - 2 : config.height - 1;
+
+  const availablePositions = Math.max(0, (maxX - minX + 1) * (maxY - minY + 1));
+  const totalPixels = Math.min(requestedPixels, availablePositions);
 
   for (let i = 0; i < totalPixels; i++) {
     // Generate unique position
     let x: number, y: number, posKey: string;
     let attempts = 0;
     do {
-      x = rng.nextInt(minCoord, maxX);
-      y = rng.nextInt(minCoord, maxY);
+      x = rng.nextInt(minX, maxX);
+      y = rng.nextInt(minY, maxY);
       posKey = `${x},${y}`;
       attempts++;
       // Fallback if we can't find unique position (very unlikely)
@@ -123,7 +131,7 @@ export function generateMask(config: GeneratorConfig): HotPixelMask {
     height: config.height,
     pixels,
     seed: config.seed,
-    generatedAt: new Date().toISOString(),
+    generatedAt: deterministicGeneratedAt(config),
   };
 
   return mask;
@@ -161,4 +169,17 @@ function sampleFromCDF<T>(values: readonly T[], cdf: number[], roll: number): T 
     throw new Error('CDF sampling failed: values array is empty');
   }
   return lastValue;
+}
+
+/**
+ * Deterministic timestamp derived from configuration.
+ * Keeps mask generation fully reproducible for identical config/seed.
+ */
+function deterministicGeneratedAt(config: GeneratorConfig): string {
+  const hash = SeededRNG.hash(
+    SeededRNG.hash(config.seed, config.width, config.height),
+    Math.round((config.density ?? DEFAULTS.density) * 1000),
+    1
+  );
+  return new Date(hash * 1000).toISOString();
 }

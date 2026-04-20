@@ -63,6 +63,7 @@ describe('generateMask', () => {
 
     expect(mask1.pixels).toEqual(mask2.pixels);
     expect(mask1.seed).toBe(mask2.seed);
+    expect(mask1.generatedAt).toBe(mask2.generatedAt);
   });
 
   it('generates different masks for different seeds', () => {
@@ -95,11 +96,30 @@ describe('generateMask', () => {
   it('generates valid pixel coordinates within bounds', () => {
     const mask = generateMask(baseConfig);
     for (const pixel of mask.pixels) {
-      expect(pixel.x).toBeGreaterThanOrEqual(2);
-      expect(pixel.x).toBeLessThan(baseConfig.width - 2);
-      expect(pixel.y).toBeGreaterThanOrEqual(2);
-      expect(pixel.y).toBeLessThan(baseConfig.height - 2);
+      expect(pixel.x).toBeGreaterThanOrEqual(1);
+      expect(pixel.x).toBeLessThan(baseConfig.width - 1);
+      expect(pixel.y).toBeGreaterThanOrEqual(1);
+      expect(pixel.y).toBeLessThan(baseConfig.height - 1);
     }
+  });
+
+  it('handles very small frame sizes without out-of-bounds coordinates', () => {
+    const tinyMask = generateMask({
+      width: 3,
+      height: 3,
+      seed: 123,
+      density: 1000,
+    });
+
+    for (const pixel of tinyMask.pixels) {
+      expect(pixel.x).toBeGreaterThanOrEqual(0);
+      expect(pixel.x).toBeLessThan(3);
+      expect(pixel.y).toBeGreaterThanOrEqual(0);
+      expect(pixel.y).toBeLessThan(3);
+    }
+
+    // Cannot exceed unique available coordinates
+    expect(tinyMask.pixels.length).toBeLessThanOrEqual(9);
   });
 
   it('generates valid pixel types', () => {
