@@ -75,13 +75,16 @@ Requires a modern browser with File System Access API support:
 - File System Access API for streaming
 - Deployed on Cloudflare Pages
 
-## Dev: Synthetic Benchmark Harness (planned)
+## Dev: Synthetic Benchmark Harness
 
-To improve detection/healing quality with reproducible ground truth, we are adding a dev-only synthetic corruption + evaluation harness.
+Pixel Healer includes a dev-only synthetic corruption + evaluation harness for reproducible detection/healing experiments.
 
 - Spec: [`docs/SYNTHETIC_HOT_PIXEL_GENERATOR_SPEC.md`](docs/SYNTHETIC_HOT_PIXEL_GENERATOR_SPEC.md)
-- Scope: deterministic hot-pixel injection, mask fixtures, evaluation metrics (precision/recall/F1, PSNR/SSIM), CI regression gate
-- Shipping policy: dev-only (`src/dev/**`), excluded from production bundle
+- Scope: deterministic hot-pixel injection, mask fixtures, evaluation metrics (precision/recall/F1, PSNR/SSIM), hidden dev panel, CI regression gate
+- Open the panel during `pnpm dev` with `?dev=1` or `Ctrl+Shift+D`
+- Use it after running analysis so a clean frame is in memory; choose a profile/seed, generate a corrupted sequence, then run evaluation
+- CI/test flow includes a fixed typical-profile baseline gate and fails if F1 drops below the documented floor (`0.45`)
+- Shipping policy: dev-only (`src/dev/**`), dynamically imported behind `import.meta.env.DEV`
 
 ## Contributing
 

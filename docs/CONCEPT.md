@@ -2,7 +2,7 @@
 
 *Browser-based hot pixel removal for astrophotography time-lapses*
 
-Last updated: 2026-04-20 (Phase 3a planning update)
+Last updated: 2026-04-20 (Phase 3a Step 3 complete)
 
 ## Problem Statement
 
@@ -121,13 +121,30 @@ Provide a free, privacy-first web app that:
 - [x] Processing statistics + results view
 - [x] MIME/extension consistency
 
-### Phase 3a: Synthetic Benchmark Harness (next)
-- [ ] Dev-only synthetic hot-pixel generator (`src/dev/hotPixelGen/*`)
-- [ ] Deterministic seeded masks + fixture serialization (`schemaVersion: 1`)
-- [ ] Evaluation harness (precision/recall/F1 + PSNR/SSIM + runtime)
-- [ ] Baseline benchmark capture + CI regression gate
-- [ ] Hidden dev panel for qualitative inspection (`?dev=1` / shortcut)
-- [ ] Spec reference: `docs/SYNTHETIC_HOT_PIXEL_GENERATOR_SPEC.md`
+### Phase 3a: Synthetic Benchmark Harness ✅
+- [x] Dev-only synthetic hot-pixel generator (`src/dev/hotPixelGen/*`)
+- [x] Deterministic seeded masks + fixture serialization (`schemaVersion: 1`)
+- [x] Evaluation harness (precision/recall/F1 + PSNR/SSIM + runtime)
+- [x] Baseline benchmark capture + CI regression gate
+- [x] Hidden dev panel for qualitative inspection (`?dev=1` / `Ctrl+Shift+D`)
+- [x] Spec reference: `docs/SYNTHETIC_HOT_PIXEL_GENERATOR_SPEC.md`
+
+#### Phase 3a Step 3 Dev Panel
+
+The hidden panel is developer tooling only. It is dynamically imported from `src/dev/DevPanel.tsx` behind `import.meta.env.DEV`, so it is not wired into the production runtime.
+
+To use it:
+1. Run `pnpm dev`.
+2. Open the app with `?dev=1` or press `Ctrl+Shift+D`.
+3. Select a folder and run analysis so the app has a clean frame in memory.
+4. Choose an `easy`, `typical`, `nasty`, or `pathological` profile plus a seed.
+5. Generate a corrupted sequence, run `evaluate()`, and compare clean/corrupted/healed previews with the diff indicator.
+
+The panel reports precision, recall, F1, PSNR, SSIM, and runtime for the current synthetic run.
+
+#### CI Regression Gate
+
+`npm test` includes a deterministic synthetic baseline check using the `typical` profile and fixed seed `1337`. The gate currently fails if baseline F1 drops below `0.45`, which is below the observed current baseline but high enough to catch clear regressions in detection behavior.
 
 ### Phase 3b: Review UX
 - [ ] Manual add/remove hot pixels (click to toggle)
@@ -167,6 +184,9 @@ pixel-healer/
 │   │   └── image-utils.ts    # Overlay, stats, data URLs
 │   ├── hooks/
 │   │   └── useFileSystem.ts  # File System Access API wrapper
+│   ├── dev/
+│   │   ├── DevPanel.tsx      # Hidden dev-only synthetic harness panel
+│   │   └── hotPixelGen/      # Synthetic generator, evaluator, baseline tests
 │   ├── store/
 │   │   └── app-store.ts      # Zustand global state
 │   ├── types/
