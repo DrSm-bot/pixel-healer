@@ -24,6 +24,7 @@ interface AppState {
   detectionOptions: DetectionOptions;
   hotPixelMap: HotPixelMap | null;
   sampleFrameData: ImageData | null;
+  previewUrl: string | null;
 
   // Processing
   progress: ProcessingProgress | null;
@@ -42,6 +43,7 @@ interface AppState {
   setDetectionOptions: (options: Partial<DetectionOptions>) => void;
   setHotPixelMap: (map: HotPixelMap | null) => void;
   setSampleFrameData: (data: ImageData | null) => void;
+  setPreviewUrl: (url: string | null) => void;
   setProgress: (progress: ProcessingProgress | null) => void;
   setStats: (stats: ProcessingStats | null) => void;
   setPaused: (paused: boolean) => void;
@@ -62,6 +64,7 @@ const initialState = {
   },
   hotPixelMap: null,
   sampleFrameData: null,
+  previewUrl: null,
   progress: null,
   stats: null,
   isPaused: false,
@@ -88,6 +91,8 @@ export const useAppStore = create<AppState>((set) => ({
   setHotPixelMap: (map) => set({ hotPixelMap: map }),
 
   setSampleFrameData: (data) => set({ sampleFrameData: data }),
+
+  setPreviewUrl: (url) => set({ previewUrl: url }),
 
   setProgress: (progress) => set({ progress }),
 

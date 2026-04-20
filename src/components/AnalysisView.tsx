@@ -10,8 +10,10 @@ export function AnalysisView() {
     inputFiles,
     hotPixelMap,
     detectionOptions,
+    previewUrl,
     setHotPixelMap,
     setSampleFrameData,
+    setPreviewUrl,
     setStep,
     setError,
     setProgress,
@@ -20,7 +22,6 @@ export function AnalysisView() {
   const { loadImageData } = useFileSystem();
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Cleanup preview URL on unmount
   useEffect(() => {
@@ -85,10 +86,10 @@ export function AnalysisView() {
       if (firstImageData) {
         const overlay = createHotPixelOverlay(firstImageData, hotPixelMap.pixels);
         const url = await imageDataToDataUrl(overlay);
-        setPreviewUrl((prev) => {
-          if (prev) revokeDataUrl(prev);
-          return url;
-        });
+        // Clean up old preview URL before setting new one
+        const oldUrl = useAppStore.getState().previewUrl;
+        if (oldUrl) revokeDataUrl(oldUrl);
+        setPreviewUrl(url);
       }
 
       setProgress(null);
@@ -108,6 +109,7 @@ export function AnalysisView() {
     loadImageData,
     setHotPixelMap,
     setSampleFrameData,
+    setPreviewUrl,
     setProgress,
     setStep,
     setError,
