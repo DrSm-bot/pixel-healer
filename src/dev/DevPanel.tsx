@@ -91,7 +91,7 @@ export function DevPanel() {
     }
 
     try {
-      const clean = createSequenceFromFrame(sampleFrameData, FRAME_COUNT);
+      const clean = createSequenceFromFrame(sampleFrameData, FRAME_COUNT, parsedSeed);
       const profileConfig = profiles[profile];
       const config: GeneratorConfig = {
         width: sampleFrameData.width,
@@ -332,8 +332,40 @@ function hasDevQueryParam(): boolean {
   return new URLSearchParams(window.location.search).get('dev') === '1';
 }
 
-function createSequenceFromFrame(frame: ImageData, count: number): ImageData[] {
-  return Array.from({ length: count }, () => cloneImageData(frame));
+function createSequenceFromFrame(frame: ImageData, count: number, seed: number): ImageData[] {
+  return Array.from({ length: count }, (_, frameIndex) => {
+    const shifted = cloneImageData(frame);
+
+    // Create slight deterministic motion so temporal consistency tests
+    // are not biased by cloning a single static clean frame.
+    const dx = ((seed + frameIndex * 3) % 3) - 1;
+    const dy = ((seed + frameIndex * 5) % 3) - 1;
+
+    if (dx === 0 && dy === 0) {
+      return shifted;
+    }
+
+    const output = new Uint8ClampedArray(shifted.data.length);
+    const width = shifted.width;
+    const height = shifted.height;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const sourceX = clamp(x - dx, 0, width - 1);
+        const sourceY = clamp(y - dy, 0, height - 1);
+
+        const srcIdx = (sourceY * width + sourceX) * 4;
+        const dstIdx = (y * width + x) * 4;
+
+        output[dstIdx] = shifted.data[srcIdx]!;
+        output[dstIdx + 1] = shifted.data[srcIdx + 1]!;
+        output[dstIdx + 2] = shifted.data[srcIdx + 2]!;
+        output[dstIdx + 3] = shifted.data[srcIdx + 3]!;
+      }
+    }
+
+    return new ImageData(output, width, height);
+  });
 }
 
 function imageDataToObjectUrl(imageData: ImageData): string {
