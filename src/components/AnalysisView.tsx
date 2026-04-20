@@ -5,23 +5,30 @@ import { selectSampleFrames, analyzeFrame, detectHotPixels } from '@/core/detect
 import { imageDataToDataUrl, revokeDataUrl, createHotPixelOverlay } from '@/core/image-utils';
 
 export function AnalysisView() {
-  const {
-    step,
-    inputFiles,
-    hotPixelMap,
-    detectionOptions,
-    previewUrl,
-    setHotPixelMap,
-    setSampleFrameData,
-    setPreviewUrl,
-    setStep,
-    setError,
-    setProgress,
-  } = useAppStore();
+  // Use individual selectors for better re-render behavior
+  const step = useAppStore((s) => s.step);
+  const inputFiles = useAppStore((s) => s.inputFiles);
+  const hotPixelMap = useAppStore((s) => s.hotPixelMap);
+  const detectionOptions = useAppStore((s) => s.detectionOptions);
+  const previewUrl = useAppStore((s) => s.previewUrl);
+  const setHotPixelMap = useAppStore((s) => s.setHotPixelMap);
+  const setSampleFrameData = useAppStore((s) => s.setSampleFrameData);
+  const setPreviewUrl = useAppStore((s) => s.setPreviewUrl);
+  const setStep = useAppStore((s) => s.setStep);
+  const setError = useAppStore((s) => s.setError);
+  const setProgress = useAppStore((s) => s.setProgress);
 
   const { loadImageData } = useFileSystem();
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // Determine if we're in review mode
+  const isReviewStep = step === 'review';
+
+  // Debug log to trace the issue
+  useEffect(() => {
+    console.log('[AnalysisView] Current step:', step, 'isReviewStep:', isReviewStep);
+  }, [step, isReviewStep]);
 
   // Cleanup preview URL on unmount
   useEffect(() => {
@@ -114,8 +121,6 @@ export function AnalysisView() {
     setStep,
     setError,
   ]);
-
-  const isReviewStep = step === 'review';
 
   return (
     <div className="p-8">
