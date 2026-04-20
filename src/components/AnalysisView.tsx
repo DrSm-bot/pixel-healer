@@ -186,6 +186,28 @@ export function AnalysisView() {
           </div>
         )}
 
+        {isReviewStep && hotPixelMap && (
+          <div className="bg-cosmos-900/50 rounded-lg p-6 mb-6">
+            <h3 className="font-semibold mb-4">Processing Summary</h3>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-gray-400">Total Images</p>
+                <p className="text-3xl font-bold text-white">{inputFiles.length}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Hot Pixels Detected</p>
+                <p className="text-3xl font-bold text-cosmos-400">{hotPixelMap.pixels.size}</p>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-cosmos-700">
+              <p className="text-sm text-gray-400">
+                These {hotPixelMap.pixels.size} hot pixels will be repaired across all{' '}
+                {inputFiles.length} images in the next step.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-4">
           {isReviewStep ? (
             <>

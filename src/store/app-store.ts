@@ -7,6 +7,7 @@ import type {
   ProcessingProgress,
   ProcessingStats,
   DetectionOptions,
+  OutputSettings,
 } from '@/types';
 
 interface AppState {
@@ -17,8 +18,8 @@ interface AppState {
   inputDir: FileSystemDirectoryHandle | null;
   inputFiles: ImageFile[];
 
-  // Output folder (optional, defaults to input)
-  outputDir: FileSystemDirectoryHandle | null;
+  // Output settings
+  outputSettings: OutputSettings;
 
   // Detection
   detectionOptions: DetectionOptions;
@@ -39,7 +40,7 @@ interface AppState {
   setStep: (step: AppStep) => void;
   setInputDir: (dir: FileSystemDirectoryHandle | null) => void;
   setInputFiles: (files: ImageFile[]) => void;
-  setOutputDir: (dir: FileSystemDirectoryHandle | null) => void;
+  setOutputSettings: (settings: Partial<OutputSettings>) => void;
   setDetectionOptions: (options: Partial<DetectionOptions>) => void;
   setHotPixelMap: (map: HotPixelMap | null) => void;
   setSampleFrameData: (data: ImageData | null) => void;
@@ -56,7 +57,10 @@ const initialState = {
   step: 'select' as AppStep,
   inputDir: null,
   inputFiles: [],
-  outputDir: null,
+  outputSettings: {
+    outputDir: null,
+    allowOverwrite: false,
+  },
   detectionOptions: {
     threshold: 240,
     minConsistency: 0.9,
@@ -81,7 +85,10 @@ export const useAppStore = create<AppState>((set) => ({
 
   setInputFiles: (files) => set({ inputFiles: files }),
 
-  setOutputDir: (dir) => set({ outputDir: dir }),
+  setOutputSettings: (settings) =>
+    set((state) => ({
+      outputSettings: { ...state.outputSettings, ...settings },
+    })),
 
   setDetectionOptions: (options) =>
     set((state) => ({

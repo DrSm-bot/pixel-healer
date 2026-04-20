@@ -76,6 +76,16 @@ export interface DetectionOptions {
   sampleFrames?: number;
 }
 
+/**
+ * Output processing settings
+ */
+export interface OutputSettings {
+  /** Output directory handle (null means use input directory) */
+  outputDir: FileSystemDirectoryHandle | null;
+  /** Whether to overwrite input files (only if outputDir matches inputDir) */
+  allowOverwrite: boolean;
+}
+
 // ============================================================================
 // Processing Types
 // ============================================================================
@@ -109,6 +119,18 @@ export interface ProcessingProgress {
 }
 
 /**
+ * Result for a single file processing attempt
+ */
+export interface FileProcessingResult {
+  /** File name */
+  fileName: string;
+  /** Whether processing succeeded */
+  success: boolean;
+  /** Error message if failed */
+  error?: string;
+}
+
+/**
  * Final processing statistics
  */
 export interface ProcessingStats {
@@ -120,6 +142,10 @@ export interface ProcessingStats {
   processingTimeMs: number;
   /** Average time per frame in milliseconds */
   avgFrameTimeMs: number;
+  /** Per-file results */
+  fileResults: FileProcessingResult[];
+  /** Number of failed files */
+  failedCount: number;
 }
 
 // ============================================================================
