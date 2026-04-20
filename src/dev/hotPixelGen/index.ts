@@ -14,6 +14,14 @@ export type {
   GeneratorConfig,
 } from '../../types';
 
+export type {
+  EvalReport,
+  EvalScore,
+  EvaluateOptions,
+} from './eval';
+
+export type { BaselineOptions } from './baseline';
+
 // Re-export core API
 export {
   applyMask,
@@ -25,6 +33,12 @@ export {
 
 // Re-export mask generation
 export { generateMask } from './mask';
+
+// Re-export evaluation harness
+export { evaluate } from './eval';
+
+// Re-export baseline runner
+export { runBaselineEvaluation, printBaselineEvaluation } from './baseline';
 
 // Re-export RNG for advanced users
 export { SeededRNG } from './rng';
