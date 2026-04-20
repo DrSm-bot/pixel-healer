@@ -1,35 +1,29 @@
 # ✨ Pixel Healer
 
-Browser-based hot pixel remover for astrophotography image sequences.
+**Browser-based hot pixel remover for night sky time-lapse photography.**
 
-Pixel Healer detects and repairs stuck/hot pixels in time-lapse frame stacks — fully local in your browser (no uploads, no backend processing).
+Remove those annoying stuck pixels from your astrophotography sequences — entirely in your browser, with zero uploads. Your images never leave your computer.
 
-## Current Status
+## Features
 
-- ✅ **Phase 0** complete (project scaffold)
-- ✅ **Phase 1** complete (folder scan + analysis pipeline)
-- 🚧 **Next:** processing/export pipeline, manual review/edit workflow
+- 🌙 **Made for Night Sky** — Optimized for time-lapse sequences where stars move but hot pixels don't
+- 🔒 **100% Local** — All processing happens in your browser. No uploads, no servers, no tracking
+- ⚡ **Fast** — Web Workers for parallel processing, streams images without loading everything into RAM
+- 🎯 **Smart Detection** — Automatically identifies stuck pixels by analyzing multiple frames
+- 📁 **Batch Processing** — Process hundreds or thousands of frames at once
 
-## Implemented Features (as of now)
+## How It Works
 
-- Folder selection via **File System Access API**
-- Image discovery for **JPG / JPEG / PNG**
-- Deterministic filename sorting (numeric-aware)
-- Analysis flow with configurable threshold + sample count
-- Sample frame loading to `ImageData`
-- Hot-pixel detection from sampled frames
-- Preview overlay of detected hot pixels
-- Basic edge-case hardening + recoverable UI errors
+1. **Select your image folder** — Pick a directory containing your time-lapse frames
+2. **Analyze** — The tool samples the first N frames to find pixels that are consistently bright (hot pixels stay put, stars move!)
+3. **Preview** — See detected hot pixels highlighted before committing
+4. **Fix & Export** — Apply the fix to all frames and save to a new folder
 
-## Planned (next phases)
+## Quick Start
 
-- Batch repair/export pipeline
-- Manual add/remove hot pixels
-- Before/after comparison
-- Processing stats and UX polish
-- RAW format support (future)
+Visit **[pixel-healer.pages.dev](https://pixel-healer.pages.dev)** (coming soon)
 
-## Quick Start (local)
+Or run locally:
 
 ```bash
 git clone https://github.com/DrSm-bot/pixel-healer.git
@@ -38,41 +32,57 @@ pnpm install
 pnpm dev
 ```
 
-Build test:
+## Supported Formats
 
-```bash
-pnpm run typecheck
-pnpm run build
-```
+| Format | Status |
+|--------|--------|
+| JPEG/JPG | ✅ Supported |
+| PNG | ✅ Supported |
+| RAW (CR2, NEF, ARW, etc.) | 🗓️ Planned |
 
-## Cloudflare Pages
+## How Detection Works
 
-Use these settings:
+Hot pixels are sensor defects that appear as bright dots in the same position across all frames. Unlike stars (which move due to Earth's rotation), hot pixels stay stationary.
 
-- **Build command:** `pnpm run build`
-- **Build output directory:** `dist`
-- **Install command:** `pnpm install --frozen-lockfile`
-- **Node version:** `22` (recommended)
-
-## Browser Support
-
-Best experience on Chromium-based browsers due to File System Access API:
-
-- ✅ Chrome / Edge / Brave
-- ⚠️ Firefox/Safari: limited support for this workflow
+The algorithm:
+1. Samples multiple frames from your sequence
+2. For each pixel position, checks if it's consistently above a brightness threshold
+3. Pixels that are "stuck bright" across all sampled frames = hot pixels
+4. Repairs by interpolating from neighboring pixels
 
 ## Privacy
 
-All processing runs locally in the browser. Images are not uploaded by Pixel Healer.
+**Your images never leave your device.** 
+
+This tool uses the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_Access_API) to read and write files directly on your computer. There are no servers, no uploads, no analytics, no tracking.
+
+The entire application runs in your browser as static files.
+
+## Browser Support
+
+Requires a modern browser with File System Access API support:
+
+- ✅ Chrome 86+
+- ✅ Edge 86+
+- ✅ Opera 72+
+- ⚠️ Firefox (limited — can read but not write back to disk)
+- ⚠️ Safari (limited)
 
 ## Tech Stack
 
-- Vite + React 18 + TypeScript
-- Zustand
-- Tailwind CSS
-- Web Worker (analysis)
-- File System Access API
+- TypeScript + Vite + React
+- Web Workers for background processing
+- File System Access API for streaming
+- Deployed on Cloudflare Pages
+
+## Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
 MIT — see [LICENSE](LICENSE)
+
+---
+
+*Made with 🦞 by the AxonArcade crew*
