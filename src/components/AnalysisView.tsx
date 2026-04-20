@@ -6,7 +6,9 @@ import { imageDataToDataUrl, revokeDataUrl, createHotPixelOverlay } from '@/core
 
 export function AnalysisView() {
   const {
+    step,
     inputFiles,
+    hotPixelMap,
     detectionOptions,
     setHotPixelMap,
     setSampleFrameData,
@@ -111,89 +113,117 @@ export function AnalysisView() {
     setError,
   ]);
 
+  const isReviewStep = step === 'review';
+
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
-        <h2 className="text-2xl font-bold mb-2">Analyze Your Sequence</h2>
+        <h2 className="text-2xl font-bold mb-2">
+          {isReviewStep ? 'Review Detection' : 'Analyze Your Sequence'}
+        </h2>
         <p className="text-gray-400 mb-6">
-          {inputFiles.length} images found. Click analyze to detect hot pixels.
+          {isReviewStep
+            ? `${hotPixelMap?.pixels.size ?? 0} hot pixels detected. Review and continue to processing.`
+            : `${inputFiles.length} images found. Click analyze to detect hot pixels.`}
         </p>
 
-        <div className="bg-cosmos-900/50 rounded-lg p-6 mb-6">
-          <h3 className="font-semibold mb-4">Detection Settings</h3>
+        {!isReviewStep && (
+          <div className="bg-cosmos-900/50 rounded-lg p-6 mb-6">
+            <h3 className="font-semibold mb-4">Detection Settings</h3>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                Brightness Threshold: {detectionOptions.threshold}
-              </label>
-              <input
-                type="range"
-                min="200"
-                max="255"
-                value={detectionOptions.threshold}
-                onChange={(e) =>
-                  useAppStore.getState().setDetectionOptions({
-                    threshold: parseInt(e.target.value),
-                  })
-                }
-                className="w-full"
-                disabled={isAnalyzing}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Higher = fewer false positives, lower = more sensitive
-              </p>
-            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Brightness Threshold: {detectionOptions.threshold}
+                </label>
+                <input
+                  type="range"
+                  min="200"
+                  max="255"
+                  value={detectionOptions.threshold}
+                  onChange={(e) =>
+                    useAppStore.getState().setDetectionOptions({
+                      threshold: parseInt(e.target.value),
+                    })
+                  }
+                  className="w-full"
+                  disabled={isAnalyzing}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Higher = fewer false positives, lower = more sensitive
+                </p>
+              </div>
 
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                Sample Frames: {detectionOptions.sampleFrames}
-              </label>
-              <input
-                type="range"
-                min="5"
-                max="20"
-                value={detectionOptions.sampleFrames}
-                onChange={(e) =>
-                  useAppStore.getState().setDetectionOptions({
-                    sampleFrames: parseInt(e.target.value),
-                  })
-                }
-                className="w-full"
-                disabled={isAnalyzing}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                More frames = better accuracy, slower analysis
-              </p>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Sample Frames: {detectionOptions.sampleFrames}
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="20"
+                  value={detectionOptions.sampleFrames}
+                  onChange={(e) =>
+                    useAppStore.getState().setDetectionOptions({
+                      sampleFrames: parseInt(e.target.value),
+                    })
+                  }
+                  className="w-full"
+                  disabled={isAnalyzing}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  More frames = better accuracy, slower analysis
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="flex gap-4">
-          <button
-            onClick={() => setStep('select')}
-            className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium"
-            disabled={isAnalyzing}
-          >
-            ← Back
-          </button>
+          {isReviewStep ? (
+            <>
+              <button
+                onClick={() => setStep('analyze')}
+                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium"
+              >
+                ← Back to Analyze
+              </button>
 
-          <button
-            onClick={handleAnalyze}
-            disabled={isAnalyzing}
-            className="flex-1 px-6 py-3 bg-cosmos-600 hover:bg-cosmos-500 
-                       disabled:bg-cosmos-800 disabled:cursor-not-allowed
-                       rounded-lg font-semibold transition-colors"
-          >
-            {isAnalyzing ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin">⟳</span>
-                Analyzing...
-              </span>
-            ) : (
-              '🔍 Analyze Sequence'
-            )}
-          </button>
+              <button
+                onClick={() => setStep('process')}
+                className="flex-1 px-6 py-3 bg-cosmos-600 hover:bg-cosmos-500 rounded-lg font-semibold transition-colors"
+              >
+                ➡ Continue to Process
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setStep('select')}
+                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium"
+                disabled={isAnalyzing}
+              >
+                ← Back
+              </button>
+
+              <button
+                onClick={handleAnalyze}
+                disabled={isAnalyzing}
+                className="flex-1 px-6 py-3 bg-cosmos-600 hover:bg-cosmos-500 
+                           disabled:bg-cosmos-800 disabled:cursor-not-allowed
+                           rounded-lg font-semibold transition-colors"
+              >
+                {isAnalyzing ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="animate-spin">⟳</span>
+                    Analyzing...
+                  </span>
+                ) : (
+                  '🔍 Analyze Sequence'
+                )}
+              </button>
+            </>
+          )}
         </div>
 
         {previewUrl && (
