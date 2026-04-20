@@ -26,6 +26,7 @@ export function ProcessingView() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showOutputPicker, setShowOutputPicker] = useState(false);
+  const [isOutputSameAsInput, setIsOutputSameAsInput] = useState(false);
 
   // Auto-show output picker on mount if not set
   useEffect(() => {
@@ -33,6 +34,38 @@ export function ProcessingView() {
       setShowOutputPicker(true);
     }
   }, [outputSettings.outputDir, showOutputPicker]);
+
+  // Compare directory handles by entry (not object identity)
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkIfSameDirectory = async () => {
+      if (!outputSettings.outputDir || !inputDir) {
+        setIsOutputSameAsInput(false);
+        return;
+      }
+
+      try {
+        const same = await outputSettings.outputDir.isSameEntry(inputDir);
+        if (!cancelled) {
+          setIsOutputSameAsInput(same);
+          if (!same && outputSettings.allowOverwrite) {
+            setOutputSettings({ allowOverwrite: false });
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setIsOutputSameAsInput(false);
+        }
+      }
+    };
+
+    void checkIfSameDirectory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [inputDir, outputSettings.outputDir, outputSettings.allowOverwrite, setOutputSettings]);
 
   const handleSelectOutputDir = useCallback(async () => {
     const dir = await selectOutputDirectory();
@@ -45,6 +78,25 @@ export function ProcessingView() {
   const handleToggleOverwrite = useCallback(() => {
     setOutputSettings({ allowOverwrite: !outputSettings.allowOverwrite });
   }, [outputSettings.allowOverwrite, setOutputSettings]);
+
+  const getOutputFormat = useCallback(
+    (fileName: string): { format: 'image/jpeg' | 'image/png'; outputFileName: string } => {
+      const lower = fileName.toLowerCase();
+
+      if (lower.endsWith('.png')) {
+        return { format: 'image/png', outputFileName: fileName };
+      }
+
+      if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+        return { format: 'image/jpeg', outputFileName: fileName };
+      }
+
+      // Fallback: enforce extension matching actual encoding
+      const baseName = fileName.replace(/\.[^.]+$/, '');
+      return { format: 'image/jpeg', outputFileName: `${baseName}.jpg` };
+    },
+    []
+  );
 
   const handleProcess = useCallback(async () => {
     if (!hotPixelMap || !inputDir) {
@@ -60,6 +112,16 @@ export function ProcessingView() {
       setError({
         message: 'No output directory selected',
         details: 'Please select an output directory first.',
+        recoverable: true,
+      });
+      return;
+    }
+
+    if (isOutputSameAsInput && !outputSettings.allowOverwrite) {
+      setError({
+        message: 'Overwrite confirmation required',
+        details:
+          'Output folder matches input folder. Enable overwrite mode explicitly to modify originals.',
         recoverable: true,
       });
       return;
@@ -108,13 +170,20 @@ export function ProcessingView() {
           // Repair pixels
           repairAllPixels(imageData, hotPixelArray);
 
+          const { format, outputFileName } = getOutputFormat(file.name);
+
           // Save to output directory
-          if (outputSettings.allowOverwrite && outputSettings.outputDir === inputDir) {
+          if (outputSettings.allowOverwrite && isOutputSameAsInput) {
             // Overwrite mode: save to original file handle
-            await saveImageData(imageData, file.handle);
+            await saveImageData(imageData, file.handle, format);
           } else if (outputSettings.outputDir) {
-            // Safe mode: save to output directory with same filename
-            await saveImageToDirectory(imageData, outputSettings.outputDir, file.name);
+            // Safe mode: save to output directory with same filename/format
+            await saveImageToDirectory(
+              imageData,
+              outputSettings.outputDir,
+              outputFileName,
+              format
+            );
           } else {
             throw new Error('No output directory selected');
           }
@@ -168,9 +237,11 @@ export function ProcessingView() {
     inputDir,
     hotPixelMap,
     outputSettings,
+    isOutputSameAsInput,
     loadImageData,
     saveImageData,
     saveImageToDirectory,
+    getOutputFormat,
     setProgress,
     setStats,
     setPaused,
@@ -187,8 +258,7 @@ export function ProcessingView() {
   };
 
   const isOutputDirSet = !!outputSettings.outputDir;
-  const isSameAsInput =
-    outputSettings.outputDir && inputDir && outputSettings.outputDir === inputDir;
+  const isSameAsInput = isOutputSameAsInput;
 
   return (
     <div className="p-8">
