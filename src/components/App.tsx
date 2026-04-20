@@ -16,36 +16,41 @@ function StepIndicator() {
   ];
 
   const currentIndex = steps.findIndex((s) => s.id === step);
+  const isWorkflowComplete = step === 'complete';
 
   return (
     <div className="flex items-center justify-center gap-2 py-4 px-8 bg-cosmos-900/30">
-      {steps.map((s, i) => (
-        <div key={s.id} className="flex items-center">
-          <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-              ${i < currentIndex ? 'bg-green-600 text-white' : ''}
-              ${i === currentIndex ? 'bg-cosmos-600 text-white' : ''}
-              ${i > currentIndex ? 'bg-cosmos-800 text-gray-500' : ''}
-            `}
-          >
-            {i < currentIndex ? '✓' : i + 1}
-          </div>
-          <span
-            className={`ml-2 text-sm hidden sm:inline
-              ${i <= currentIndex ? 'text-white' : 'text-gray-500'}
-            `}
-          >
-            {s.label}
-          </span>
-          {i < steps.length - 1 && (
+      {steps.map((s, i) => {
+        const isDone = i < currentIndex || (isWorkflowComplete && i === currentIndex);
+
+        return (
+          <div key={s.id} className="flex items-center">
             <div
-              className={`w-8 h-0.5 mx-2
-                ${i < currentIndex ? 'bg-green-600' : 'bg-cosmos-800'}
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
+                ${isDone ? 'bg-green-600 text-white' : ''}
+                ${!isDone && i === currentIndex ? 'bg-cosmos-600 text-white' : ''}
+                ${i > currentIndex ? 'bg-cosmos-800 text-gray-500' : ''}
               `}
-            />
-          )}
-        </div>
-      ))}
+            >
+              {isDone ? '✓' : i + 1}
+            </div>
+            <span
+              className={`ml-2 text-sm hidden sm:inline
+                ${i <= currentIndex ? 'text-white' : 'text-gray-500'}
+              `}
+            >
+              {s.label}
+            </span>
+            {i < steps.length - 1 && (
+              <div
+                className={`w-8 h-0.5 mx-2
+                  ${i < currentIndex ? 'bg-green-600' : 'bg-cosmos-800'}
+                `}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
