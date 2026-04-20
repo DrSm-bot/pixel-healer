@@ -75,6 +75,14 @@ Requires a modern browser with File System Access API support:
 - File System Access API for streaming
 - Deployed on Cloudflare Pages
 
+## Dev: Synthetic Benchmark Harness (planned)
+
+To improve detection/healing quality with reproducible ground truth, we are adding a dev-only synthetic corruption + evaluation harness.
+
+- Spec: [`docs/SYNTHETIC_HOT_PIXEL_GENERATOR_SPEC.md`](docs/SYNTHETIC_HOT_PIXEL_GENERATOR_SPEC.md)
+- Scope: deterministic hot-pixel injection, mask fixtures, evaluation metrics (precision/recall/F1, PSNR/SSIM), CI regression gate
+- Shipping policy: dev-only (`src/dev/**`), excluded from production bundle
+
 ## Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
