@@ -21,7 +21,7 @@ Remove those annoying stuck pixels from your astrophotography sequences — enti
 
 ## Quick Start
 
-Visit **[pixel-healer.pages.dev](https://pixel-healer.pages.dev)** (coming soon)
+Visit **[pixel-healer.pages.dev](https://pixel-healer.pages.dev)**
 
 Or run locally:
 
