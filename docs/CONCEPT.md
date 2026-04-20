@@ -235,3 +235,7 @@ Users can:
 | #4 | Fix: Zustand selectors for re-render | ✅ Merged |
 | #5 | Phase 2: Processing + Export | ✅ Merged |
 | #6 | Fix: Spinner + Done checkmark cosmetics | ✅ Merged |
+| #7 | Docs: add synthetic hot-pixel generator + eval harness spec | ✅ Merged |
+| #8 | Phase 3a Step 1: synthetic generator core | ✅ Merged |
+| #9 | Phase 3a Step 2: evaluation harness + baseline metrics | ✅ Merged |
+| #10 | Phase 3a Step 3: dev panel + regression gate + docs | ✅ Merged |
