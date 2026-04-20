@@ -1,8 +1,13 @@
+import { lazy, Suspense } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { FolderSelect } from './FolderSelect';
 import { AnalysisView } from './AnalysisView';
 import { ProcessingView } from './ProcessingView';
 import { ResultsView } from './ResultsView';
+
+const DevPanel = import.meta.env.DEV
+  ? lazy(() => import('@/dev/DevPanel').then((module) => ({ default: module.DevPanel })))
+  : null;
 
 function StepIndicator() {
   const step = useAppStore((s) => s.step);
@@ -127,6 +132,12 @@ export function App() {
           </p>
         </div>
       </footer>
+
+      {DevPanel && (
+        <Suspense fallback={null}>
+          <DevPanel />
+        </Suspense>
+      )}
     </div>
   );
 }
