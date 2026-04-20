@@ -18,12 +18,21 @@ interface UseFileSystemReturn {
     handle: FileSystemDirectoryHandle;
     files: ImageFile[];
   } | null>;
+  /** Open directory picker for output location */
+  selectOutputDirectory: () => Promise<FileSystemDirectoryHandle | null>;
   /** Load an image file as ImageData */
   loadImageData: (file: ImageFile) => Promise<ImageData>;
   /** Save ImageData back to a file */
   saveImageData: (
     imageData: ImageData,
     handle: FileSystemFileHandle,
+    format?: 'image/jpeg' | 'image/png'
+  ) => Promise<void>;
+  /** Save ImageData to a specific directory with a filename */
+  saveImageToDirectory: (
+    imageData: ImageData,
+    directory: FileSystemDirectoryHandle,
+    fileName: string,
     format?: 'image/jpeg' | 'image/png'
   ) => Promise<void>;
 }
@@ -93,6 +102,28 @@ export function useFileSystem(): UseFileSystemReturn {
     return ctx.getImageData(0, 0, bitmap.width, bitmap.height);
   }, []);
 
+  const selectOutputDirectory = useCallback(async () => {
+    if (!isSupported) {
+      console.error('File System Access API not supported');
+      return null;
+    }
+
+    try {
+      const handle = await window.showDirectoryPicker({
+        id: 'pixel-healer-output',
+        mode: 'readwrite',
+        startIn: 'pictures',
+      });
+      return handle;
+    } catch (err) {
+      // User cancelled the picker
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return null;
+      }
+      throw err;
+    }
+  }, [isSupported]);
+
   const saveImageData = useCallback(
     async (
       imageData: ImageData,
@@ -118,11 +149,40 @@ export function useFileSystem(): UseFileSystemReturn {
     []
   );
 
+  const saveImageToDirectory = useCallback(
+    async (
+      imageData: ImageData,
+      directory: FileSystemDirectoryHandle,
+      fileName: string,
+      format: 'image/jpeg' | 'image/png' = 'image/jpeg'
+    ): Promise<void> => {
+      const canvas = new OffscreenCanvas(imageData.width, imageData.height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to get canvas context');
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+
+      const options: ImageEncodeOptions =
+        format === 'image/jpeg' ? { type: format, quality: 0.95 } : { type: format };
+      const blob = await canvas.convertToBlob(options);
+
+      const fileHandle = await directory.getFileHandle(fileName, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    },
+    []
+  );
+
   return {
     isSupported,
     isScanning,
     selectDirectory,
+    selectOutputDirectory,
     loadImageData,
     saveImageData,
+    saveImageToDirectory,
   };
 }
