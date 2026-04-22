@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { analyzeFrame, detectHotPixels } from '../../src/core/detection';
+import { analyzeFrame, detectHotPixels, extractBrightnessMap } from '../../src/core/detection';
 import { cloneImageData, repairAllPixels } from '../../src/core/repair';
 import type { DetectionOptions, GeneratorConfig } from '../../src/types';
 import type { EvalReport } from '../../src/dev/hotPixelGen/eval';
@@ -29,6 +29,8 @@ const LOCAL_DETECTION_OPTIONS: DetectionOptions = {
   temporalMinRunRatio: Number(process.env.PIXEL_HEALER_LOCAL_TEMPORAL_MIN_RUN ?? 0.875),
   spatialIsolationEnabled: process.env.PIXEL_HEALER_LOCAL_SPATIAL !== '0',
   spatialMaxHotNeighbors: Number(process.env.PIXEL_HEALER_LOCAL_SPATIAL_MAX_NEIGHBORS ?? 0),
+  varianceFilterEnabled: process.env.PIXEL_HEALER_LOCAL_VARIANCE !== '0',
+  varianceMaxThreshold: Number(process.env.PIXEL_HEALER_LOCAL_VARIANCE_MAX ?? 100),
 };
 
 const canvasModule = await tryImportCanvas();
@@ -75,10 +77,19 @@ if (!canvasModule) {
                 const analyzedFrames = corruptedFrames.map((frame) =>
                   analyzeFrame(frame, LOCAL_DETECTION_OPTIONS)
                 );
-                const detected = detectHotPixels(analyzedFrames, width, height, {
-                  ...LOCAL_DETECTION_OPTIONS,
-                  sampleFrames: corruptedFrames.length,
-                });
+                const frameBrightnessMaps = corruptedFrames.map((frame) =>
+                  extractBrightnessMap(frame)
+                );
+                const detected = detectHotPixels(
+                  analyzedFrames,
+                  width,
+                  height,
+                  {
+                    ...LOCAL_DETECTION_OPTIONS,
+                    sampleFrames: corruptedFrames.length,
+                  },
+                  frameBrightnessMaps
+                );
 
                 return new Set(
                   Array.from(detected.pixels).map((pixelIndex) =>
@@ -215,7 +226,7 @@ function logReport(stackName: string, profileName: string, report: EvalReport): 
   const psnr = Number.isFinite(report.psnrVsClean) ? report.psnrVsClean.toFixed(3) : '∞';
 
   console.info(
-    `[local-fixture] stack=${stackName} profile=${profileName} seed=${DEFAULT_SEED} contrast=${LOCAL_DETECTION_OPTIONS.contrastEnabled ? 'on' : 'off'} cMin=${LOCAL_DETECTION_OPTIONS.contrastMinRatio ?? '-'} adaptive=${LOCAL_DETECTION_OPTIONS.adaptiveThreshold ? 'on' : 'off'} p=${LOCAL_DETECTION_OPTIONS.adaptivePercentile ?? '-'} minRun=${LOCAL_DETECTION_OPTIONS.temporalMinRunRatio ?? 0} spatial=${LOCAL_DETECTION_OPTIONS.spatialIsolationEnabled ? 'on' : 'off'} maxN=${LOCAL_DETECTION_OPTIONS.spatialMaxHotNeighbors ?? '-'} precision=${report.precision.toFixed(3)} recall=${report.recall.toFixed(3)} f1=${report.f1.toFixed(3)} psnr=${psnr} ssim=${report.ssimVsClean.toFixed(3)} runtimeMs=${runtimeMs.toFixed(1)}`
+    `[local-fixture] stack=${stackName} profile=${profileName} seed=${DEFAULT_SEED} contrast=${LOCAL_DETECTION_OPTIONS.contrastEnabled ? 'on' : 'off'} cMin=${LOCAL_DETECTION_OPTIONS.contrastMinRatio ?? '-'} adaptive=${LOCAL_DETECTION_OPTIONS.adaptiveThreshold ? 'on' : 'off'} p=${LOCAL_DETECTION_OPTIONS.adaptivePercentile ?? '-'} minRun=${LOCAL_DETECTION_OPTIONS.temporalMinRunRatio ?? 0} spatial=${LOCAL_DETECTION_OPTIONS.spatialIsolationEnabled ? 'on' : 'off'} maxN=${LOCAL_DETECTION_OPTIONS.spatialMaxHotNeighbors ?? '-'} variance=${LOCAL_DETECTION_OPTIONS.varianceFilterEnabled ? 'on' : 'off'} vMax=${LOCAL_DETECTION_OPTIONS.varianceMaxThreshold ?? '-'} precision=${report.precision.toFixed(3)} recall=${report.recall.toFixed(3)} f1=${report.f1.toFixed(3)} psnr=${psnr} ssim=${report.ssimVsClean.toFixed(3)} runtimeMs=${runtimeMs.toFixed(1)}`
   );
 }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { useFileSystem } from '@/hooks/useFileSystem';
-import { selectSampleFrames, analyzeFrame, detectHotPixels } from '@/core/detection';
+import { selectSampleFrames, analyzeFrame, detectHotPixels, extractBrightnessMap } from '@/core/detection';
 import { imageDataToDataUrl, revokeDataUrl, createHotPixelOverlay } from '@/core/image-utils';
 
 export function AnalysisView() {
@@ -53,6 +53,7 @@ export function AnalysisView() {
       const sampleIndices = selectSampleFrames(inputFiles.length, sampleCount);
 
       const frameResults: Uint8Array[] = [];
+      const frameBrightnessMaps: Uint8Array[] = [];
       let firstImageData: ImageData | null = null;
       let width = 0;
       let height = 0;
@@ -79,9 +80,16 @@ export function AnalysisView() {
 
         const result = analyzeFrame(imageData, detectionOptions);
         frameResults.push(result);
+        frameBrightnessMaps.push(extractBrightnessMap(imageData));
       }
 
-      const hotPixelMap = detectHotPixels(frameResults, width, height, detectionOptions);
+      const hotPixelMap = detectHotPixels(
+        frameResults,
+        width,
+        height,
+        detectionOptions,
+        frameBrightnessMaps
+      );
       setHotPixelMap(hotPixelMap);
 
       // Create preview with overlay

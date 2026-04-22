@@ -74,6 +74,8 @@ const initialState = {
     temporalMinRunRatio: 0.875,
     spatialIsolationEnabled: true,
     spatialMaxHotNeighbors: 0,
+    varianceFilterEnabled: true,
+    varianceMaxThreshold: 100,
   },
   hotPixelMap: null,
   sampleFrameData: null,

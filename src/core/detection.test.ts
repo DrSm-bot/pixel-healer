@@ -179,6 +179,66 @@ describe('detectHotPixels temporal run filter', () => {
   });
 });
 
+describe('detectHotPixels variance filter', () => {
+  it('filters candidates with high temporal brightness variance', () => {
+    const frameResults = [
+      new Uint8Array([1]),
+      new Uint8Array([1]),
+      new Uint8Array([0]),
+      new Uint8Array([1]),
+    ];
+    const frameBrightnessMaps = [
+      new Uint8Array([255]),
+      new Uint8Array([10]),
+      new Uint8Array([250]),
+      new Uint8Array([15]),
+    ];
+
+    const result = detectHotPixels(
+      frameResults,
+      1,
+      1,
+      {
+        minConsistency: 0.5,
+        varianceFilterEnabled: true,
+        varianceMaxThreshold: 100,
+      },
+      frameBrightnessMaps
+    );
+
+    expect(result.pixels.size).toBe(0);
+  });
+
+  it('keeps candidates with low temporal brightness variance', () => {
+    const frameResults = [
+      new Uint8Array([1]),
+      new Uint8Array([1]),
+      new Uint8Array([1]),
+      new Uint8Array([1]),
+    ];
+    const frameBrightnessMaps = [
+      new Uint8Array([200]),
+      new Uint8Array([202]),
+      new Uint8Array([199]),
+      new Uint8Array([201]),
+    ];
+
+    const result = detectHotPixels(
+      frameResults,
+      1,
+      1,
+      {
+        minConsistency: 0.5,
+        varianceFilterEnabled: true,
+        varianceMaxThreshold: 100,
+      },
+      frameBrightnessMaps
+    );
+
+    expect(result.pixels.size).toBe(1);
+  });
+});
+
 describe('detectHotPixels spatial isolation filter', () => {
   it('removes clustered detections when spatial isolation is enabled', () => {
     // 2x2 cluster in a 3x3 frame, all hot in all frames.

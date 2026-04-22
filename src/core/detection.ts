@@ -93,6 +93,17 @@ function getPixelBrightness(data: Uint8ClampedArray, pixelIndex: number): number
   return Math.max(data[idx]!, data[idx + 1]!, data[idx + 2]!);
 }
 
+export function extractBrightnessMap(imageData: ImageData): Uint8Array {
+  const pixelCount = imageData.width * imageData.height;
+  const brightnessMap = new Uint8Array(pixelCount);
+
+  for (let i = 0; i < pixelCount; i++) {
+    brightnessMap[i] = getPixelBrightness(imageData.data, i);
+  }
+
+  return brightnessMap;
+}
+
 function passesContrastCheck(
   data: Uint8ClampedArray,
   x: number,
@@ -131,7 +142,8 @@ export function detectHotPixels(
   frameResults: Uint8Array[],
   width: number,
   height: number,
-  options: DetectionOptions = {}
+  options: DetectionOptions = {},
+  frameBrightnessMaps?: Uint8Array[]
 ): HotPixelMap {
   const { threshold = 240, minConsistency = 0.9 } = options;
 
@@ -155,6 +167,12 @@ export function detectHotPixels(
   const minHotRunFrames = Math.max(1, Math.ceil(frameCount * minRunRatio));
   const spatialIsolationEnabled = options.spatialIsolationEnabled ?? false;
   const spatialMaxHotNeighbors = Math.max(0, Math.floor(options.spatialMaxHotNeighbors ?? 8));
+  const varianceMaxThreshold = Math.max(0, options.varianceMaxThreshold ?? 100);
+  const hasValidBrightnessMaps =
+    Array.isArray(frameBrightnessMaps) &&
+    frameBrightnessMaps.length === frameCount &&
+    frameBrightnessMaps.every((frame) => frame.length === pixelCount);
+  const varianceFilterEnabled = (options.varianceFilterEnabled ?? true) && hasValidBrightnessMaps;
 
   // Sum up hot counts across all frames and track temporal persistence
   const hotCounts = new Uint16Array(pixelCount);
@@ -209,12 +227,22 @@ export function detectHotPixels(
 
     const consistency = hotCounts[index]! / frameCount;
 
+    if (
+      varianceFilterEnabled &&
+      consistency < 1 &&
+      calculatePixelVariance(frameResults, frameBrightnessMaps!, index) > varianceMaxThreshold
+    ) {
+      continue;
+    }
+
     pixels.add(index);
     details.push({
       x,
       y,
       index,
-      avgBrightness: 255, // Placeholder - would need actual values
+      avgBrightness: hasValidBrightnessMaps
+        ? calculatePixelMean(frameResults, frameBrightnessMaps!, index)
+        : 255,
       consistency,
     });
   }
@@ -247,6 +275,71 @@ export function selectSampleFrames(totalFrames: number, sampleCount: number): nu
   }
 
   return indices;
+}
+
+function calculatePixelMean(
+  frameResults: Uint8Array[],
+  frameBrightnessMaps: Uint8Array[],
+  pixelIndex: number
+): number {
+  const hotFrameValues = collectHotFrameBrightnessValues(
+    frameResults,
+    frameBrightnessMaps,
+    pixelIndex
+  );
+
+  if (hotFrameValues.length === 0) {
+    return 0;
+  }
+
+  let sum = 0;
+  for (const value of hotFrameValues) {
+    sum += value;
+  }
+
+  return sum / hotFrameValues.length;
+}
+
+function calculatePixelVariance(
+  frameResults: Uint8Array[],
+  frameBrightnessMaps: Uint8Array[],
+  pixelIndex: number
+): number {
+  const hotFrameValues = collectHotFrameBrightnessValues(
+    frameResults,
+    frameBrightnessMaps,
+    pixelIndex
+  );
+
+  if (hotFrameValues.length < 2) {
+    return 0;
+  }
+
+  const mean = hotFrameValues.reduce((sum, value) => sum + value, 0) / hotFrameValues.length;
+  let squaredDiffSum = 0;
+
+  for (const value of hotFrameValues) {
+    const delta = value - mean;
+    squaredDiffSum += delta * delta;
+  }
+
+  return squaredDiffSum / hotFrameValues.length;
+}
+
+function collectHotFrameBrightnessValues(
+  frameResults: Uint8Array[],
+  frameBrightnessMaps: Uint8Array[],
+  pixelIndex: number
+): number[] {
+  const values: number[] = [];
+
+  for (let frameIndex = 0; frameIndex < frameResults.length; frameIndex++) {
+    if (frameResults[frameIndex]![pixelIndex] === 1) {
+      values.push(frameBrightnessMaps[frameIndex]![pixelIndex]!);
+    }
+  }
+
+  return values;
 }
 
 /**

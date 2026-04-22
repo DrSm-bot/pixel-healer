@@ -92,6 +92,10 @@ export interface DetectionOptions {
   spatialIsolationEnabled?: boolean;
   /** Maximum number of hot neighbors (8-neighborhood) allowed for a hot pixel (default 8) */
   spatialMaxHotNeighbors?: number;
+  /** Enable temporal brightness variance filtering for final candidates (default true) */
+  varianceFilterEnabled?: boolean;
+  /** Maximum allowed per-pixel brightness variance across sampled frames (default 100) */
+  varianceMaxThreshold?: number;
 }
 
 /**
