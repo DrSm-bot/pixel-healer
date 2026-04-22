@@ -62,14 +62,15 @@ const initialState = {
     allowOverwrite: false,
   },
   detectionOptions: {
+    // Optimized defaults for best F1 scores across different image types
     threshold: 240,
     contrastEnabled: true,
-    contrastMinRatio: 1.5,
+    contrastMinRatio: 1.3, // Lowered from 1.5 for better recall on subtle hot pixels
     minConsistency: 0.9,
     sampleFrames: 10,
-    adaptiveThreshold: false,
-    adaptivePercentile: 0.999,
-    adaptiveMinThreshold: 220,
+    adaptiveThreshold: true, // Enabled by default - works better across different cameras/ISOs
+    adaptivePercentile: 0.995, // 99.5th percentile
+    adaptiveMinThreshold: 200, // Lowered to catch dimmer hot pixels
     adaptiveMaxThreshold: 255,
     temporalMinRunRatio: 0.875,
     spatialIsolationEnabled: true,
