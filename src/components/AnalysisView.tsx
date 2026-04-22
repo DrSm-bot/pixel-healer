@@ -153,7 +153,6 @@ export function AnalysisView() {
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Higher = fewer false positives, lower = more sensitive.
-                  Adaptive thresholding is enabled by default.
                 </p>
               </div>
 

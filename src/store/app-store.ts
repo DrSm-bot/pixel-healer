@@ -65,7 +65,7 @@ const initialState = {
     threshold: 240,
     minConsistency: 0.9,
     sampleFrames: 10,
-    adaptiveThreshold: true,
+    adaptiveThreshold: false,
     adaptivePercentile: 0.999,
     adaptiveMinThreshold: 220,
     adaptiveMaxThreshold: 255,
