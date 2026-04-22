@@ -125,9 +125,7 @@ export function DevPanel() {
         cleanFrames: sequence.clean,
         mask: sequence.mask,
         detect: async (frames) => {
-          const frameResults = frames.map((frame) =>
-            analyzeFrame(frame, detectionOptions.threshold ?? 240)
-          );
+          const frameResults = frames.map((frame) => analyzeFrame(frame, detectionOptions));
           const detected = detectHotPixels(
             frameResults,
             sequence.mask.width,

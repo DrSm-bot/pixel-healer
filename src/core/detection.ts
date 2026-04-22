@@ -11,13 +11,21 @@
 import type { HotPixelMap, HotPixel, DetectionOptions } from '@/types';
 
 /**
- * Analyze a single frame and count hot pixels
- * Returns a Uint16Array where each element is the brightness of that pixel
+ * Analyze a single frame and count hot pixels.
+ * Returns a binary map where each element is 1 if hot, otherwise 0.
  */
-export function analyzeFrame(imageData: ImageData, threshold: number): Uint8Array {
+export function analyzeFrame(
+  imageData: ImageData,
+  thresholdOrOptions: number | DetectionOptions
+): Uint8Array {
+  const options: DetectionOptions =
+    typeof thresholdOrOptions === 'number' ? { threshold: thresholdOrOptions } : thresholdOrOptions;
+
   const { data, width, height } = imageData;
   const pixelCount = width * height;
   const result = new Uint8Array(pixelCount);
+
+  const threshold = resolveThreshold(imageData, options);
 
   for (let i = 0; i < pixelCount; i++) {
     const idx = i * 4;
@@ -33,6 +41,45 @@ export function analyzeFrame(imageData: ImageData, threshold: number): Uint8Arra
 /**
  * Combine analysis results from multiple frames to identify hot pixels
  */
+function resolveThreshold(imageData: ImageData, options: DetectionOptions): number {
+  const baseThreshold = clampToByte(options.threshold ?? 240);
+
+  if (!options.adaptiveThreshold) {
+    return baseThreshold;
+  }
+
+  const percentile = clamp01(options.adaptivePercentile ?? 0.999);
+  const adaptiveMin = clampToByte(options.adaptiveMinThreshold ?? 220);
+  const adaptiveMax = clampToByte(options.adaptiveMaxThreshold ?? 255);
+
+  const percentileThreshold = getBrightnessPercentileThreshold(imageData, percentile);
+  return clampToByte(Math.max(adaptiveMin, Math.min(adaptiveMax, percentileThreshold, 255)));
+}
+
+function getBrightnessPercentileThreshold(imageData: ImageData, percentile: number): number {
+  const histogram = new Uint32Array(256);
+  const { data } = imageData;
+  const pixelCount = imageData.width * imageData.height;
+
+  for (let i = 0; i < pixelCount; i++) {
+    const idx = i * 4;
+    const brightness = Math.max(data[idx]!, data[idx + 1]!, data[idx + 2]!);
+    histogram[brightness]!++;
+  }
+
+  const target = Math.max(1, Math.ceil(pixelCount * percentile));
+  let cumulative = 0;
+
+  for (let brightness = 0; brightness < histogram.length; brightness++) {
+    cumulative += histogram[brightness]!;
+    if (cumulative >= target) {
+      return brightness;
+    }
+  }
+
+  return 255;
+}
+
 export function detectHotPixels(
   frameResults: Uint8Array[],
   width: number,
@@ -57,37 +104,72 @@ export function detectHotPixels(
   }
 
   const minHotFrames = Math.max(1, Math.floor(frameCount * minConsistency));
+  const minRunRatio = clamp01(options.temporalMinRunRatio ?? 0);
+  const minHotRunFrames = Math.max(1, Math.ceil(frameCount * minRunRatio));
+  const spatialIsolationEnabled = options.spatialIsolationEnabled ?? false;
+  const spatialMaxHotNeighbors = Math.max(0, Math.floor(options.spatialMaxHotNeighbors ?? 8));
 
-  // Sum up hot counts across all frames
+  // Sum up hot counts across all frames and track temporal persistence
   const hotCounts = new Uint16Array(pixelCount);
+  const currentRuns = new Uint16Array(pixelCount);
+  const maxRuns = new Uint16Array(pixelCount);
 
   for (const frame of frameResults) {
     for (let i = 0; i < pixelCount; i++) {
-      hotCounts[i]! += frame[i]!;
+      const isHot = frame[i] === 1;
+
+      if (isHot) {
+        hotCounts[i]! += 1;
+        const updatedRun = currentRuns[i]! + 1;
+        currentRuns[i] = updatedRun;
+        if (updatedRun > maxRuns[i]!) {
+          maxRuns[i] = updatedRun;
+        }
+      } else {
+        currentRuns[i] = 0;
+      }
     }
   }
 
-  // Identify pixels that are hot in enough frames
-  const pixels = new Set<number>();
-  const details: HotPixel[] = [];
+  // Identify candidate pixels that are hot in enough frames and persistent enough over time
+  const candidatePixels = new Set<number>();
 
   for (let i = 0; i < pixelCount; i++) {
     const count = hotCounts[i]!;
-    if (count >= minHotFrames) {
-      pixels.add(i);
+    const longestRun = maxRuns[i]!;
+    const passesTemporalRun = minRunRatio <= 0 ? true : longestRun >= minHotRunFrames;
 
-      const x = i % width;
-      const y = Math.floor(i / width);
-      const consistency = count / frameCount;
-
-      details.push({
-        x,
-        y,
-        index: i,
-        avgBrightness: 255, // Placeholder - would need actual values
-        consistency,
-      });
+    if (count >= minHotFrames && passesTemporalRun) {
+      candidatePixels.add(i);
     }
+  }
+
+  // Optionally remove clustered detections: true hot pixels are usually isolated.
+  const pixels = new Set<number>();
+  const details: HotPixel[] = [];
+
+  for (const index of candidatePixels) {
+    const x = index % width;
+    const y = Math.floor(index / width);
+
+    const passesSpatialIsolation =
+      !spatialIsolationEnabled ||
+      countHotNeighbors(candidatePixels, x, y, width, height) <= spatialMaxHotNeighbors;
+
+    if (!passesSpatialIsolation) {
+      continue;
+    }
+
+    const consistency = hotCounts[index]! / frameCount;
+
+    pixels.add(index);
+    details.push({
+      x,
+      y,
+      index,
+      avgBrightness: 255, // Placeholder - would need actual values
+      consistency,
+    });
   }
 
   return {
@@ -149,4 +231,41 @@ export function toggleHotPixel(map: HotPixelMap, x: number, y: number): HotPixel
     pixels: newPixels,
     details: newDetails,
   };
+}
+
+function countHotNeighbors(
+  candidatePixels: Set<number>,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): number {
+  let neighborCount = 0;
+
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+
+      const neighborIndex = ny * width + nx;
+      if (candidatePixels.has(neighborIndex)) {
+        neighborCount++;
+      }
+    }
+  }
+
+  return neighborCount;
+}
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+function clampToByte(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(255, Math.round(value)));
 }
