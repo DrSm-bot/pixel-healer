@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { analyzeFrame, detectHotPixels } from '@/core/detection';
+import { analyzeFrame, detectHotPixels, extractBrightnessMap } from '@/core/detection';
 import { cloneImageData, repairAllPixels } from '@/core/repair';
 import { useAppStore } from '@/store/app-store';
 import type { EvalReport } from '@/dev/hotPixelGen';
@@ -126,6 +126,7 @@ export function DevPanel() {
         mask: sequence.mask,
         detect: async (frames) => {
           const frameResults = frames.map((frame) => analyzeFrame(frame, detectionOptions));
+          const frameBrightnessMaps = frames.map((frame) => extractBrightnessMap(frame));
           const detected = detectHotPixels(
             frameResults,
             sequence.mask.width,
@@ -133,7 +134,8 @@ export function DevPanel() {
             {
               ...detectionOptions,
               sampleFrames: frames.length,
-            }
+            },
+            frameBrightnessMaps
           );
           capturedDetected = new Set(
             Array.from(detected.pixels).map((pixelIndex) =>

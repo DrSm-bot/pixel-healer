@@ -2,7 +2,7 @@
  * Small dev-only baseline runner for synthetic hot pixel metrics.
  */
 
-import { analyzeFrame, detectHotPixels } from '../../core/detection';
+import { analyzeFrame, detectHotPixels, extractBrightnessMap } from '../../core/detection';
 import { cloneImageData, repairAllPixels } from '../../core/repair';
 import type { DetectionOptions, GeneratorConfig } from '../../types';
 import type { EvalReport } from './eval';
@@ -43,10 +43,15 @@ export async function runBaselineEvaluation(options: BaselineOptions = {}): Prom
     cleanFrames,
     mask,
     detect: async (frames) => {
-      const analyzedFrames = frames.map((frame) =>
-        analyzeFrame(frame, detectionOptions.threshold ?? 180)
+      const analyzedFrames = frames.map((frame) => analyzeFrame(frame, detectionOptions));
+      const frameBrightnessMaps = frames.map((frame) => extractBrightnessMap(frame));
+      const detected = detectHotPixels(
+        analyzedFrames,
+        width,
+        height,
+        detectionOptions,
+        frameBrightnessMaps
       );
-      const detected = detectHotPixels(analyzedFrames, width, height, detectionOptions);
 
       return new Set(
         Array.from(detected.pixels).map((pixelIndex) =>

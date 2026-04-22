@@ -63,6 +63,8 @@ const initialState = {
   },
   detectionOptions: {
     threshold: 240,
+    contrastEnabled: true,
+    contrastMinRatio: 1.5,
     minConsistency: 0.9,
     sampleFrames: 10,
     adaptiveThreshold: false,
@@ -72,6 +74,8 @@ const initialState = {
     temporalMinRunRatio: 0.875,
     spatialIsolationEnabled: true,
     spatialMaxHotNeighbors: 0,
+    varianceFilterEnabled: true,
+    varianceMaxThreshold: 100,
   },
   hotPixelMap: null,
   sampleFrameData: null,

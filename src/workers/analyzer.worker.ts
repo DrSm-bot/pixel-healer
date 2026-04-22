@@ -6,7 +6,7 @@
  */
 
 import * as Comlink from 'comlink';
-import { analyzeFrame, detectHotPixels } from '@/core/detection';
+import { analyzeFrame, detectHotPixels, extractBrightnessMap } from '@/core/detection';
 import type { HotPixelMap, DetectionOptions } from '@/types';
 
 interface AnalyzerWorkerApi {
@@ -22,7 +22,8 @@ interface AnalyzerWorkerApi {
     frameResults: Uint8Array[],
     width: number,
     height: number,
-    options: DetectionOptions
+    options: DetectionOptions,
+    frameBrightnessMaps?: Uint8Array[]
   ) => HotPixelMap;
 
   /**
@@ -44,9 +45,10 @@ const api: AnalyzerWorkerApi = {
     frameResults: Uint8Array[],
     width: number,
     height: number,
-    options: DetectionOptions
+    options: DetectionOptions,
+    frameBrightnessMaps?: Uint8Array[]
   ): HotPixelMap {
-    return detectHotPixels(frameResults, width, height, options);
+    return detectHotPixels(frameResults, width, height, options, frameBrightnessMaps);
   },
 
   analyzeAndDetect(frames: ImageData[], options: DetectionOptions): HotPixelMap {
@@ -54,18 +56,19 @@ const api: AnalyzerWorkerApi = {
       throw new Error('No frames provided');
     }
 
-    const threshold = options.threshold ?? 240;
     const firstFrame = frames[0]!;
 
     // Analyze each frame
-    const frameResults = frames.map((frame) => analyzeFrame(frame, threshold));
+    const frameResults = frames.map((frame) => analyzeFrame(frame, options));
+    const frameBrightnessMaps = frames.map((frame) => extractBrightnessMap(frame));
 
     // Combine results
     return detectHotPixels(
       frameResults,
       firstFrame.width,
       firstFrame.height,
-      options
+      options,
+      frameBrightnessMaps
     );
   },
 };

@@ -45,6 +45,96 @@ describe('analyzeFrame adaptive thresholding', () => {
   });
 });
 
+describe('analyzeFrame contrast detection', () => {
+  function makeGridFrame(width: number, height: number, values: number[]): ImageData {
+    const data = new Uint8ClampedArray(values.length * 4);
+    values.forEach((value, index) => {
+      const offset = index * 4;
+      data[offset] = value;
+      data[offset + 1] = value;
+      data[offset + 2] = value;
+      data[offset + 3] = 255;
+    });
+    return new ImageData(data, width, height);
+  }
+
+  it('detects a hot pixel via contrast when below the absolute threshold', () => {
+    const frame = makeGridFrame(3, 3, [
+      40, 40, 40,
+      40, 80, 40,
+      40, 40, 40,
+    ]);
+
+    const result = analyzeFrame(frame, {
+      threshold: 240,
+      contrastEnabled: true,
+      contrastMinRatio: 1.5,
+    });
+
+    expect(Array.from(result)).toEqual([0, 0, 0, 0, 1, 0, 0, 0, 0]);
+  });
+
+  it('detects hot pixels in fully dark neighborhoods using the min-average clamp', () => {
+    const frame = makeGridFrame(3, 3, [
+      0, 0, 0,
+      0, 20, 0,
+      0, 0, 0,
+    ]);
+
+    const result = analyzeFrame(frame, {
+      threshold: 240,
+      contrastEnabled: true,
+      contrastMinRatio: 1.5,
+    });
+
+    expect(Array.from(result)).toEqual([0, 0, 0, 0, 1, 0, 0, 0, 0]);
+  });
+
+  it('keeps contrast detection disabled when requested', () => {
+    const frame = makeGridFrame(3, 3, [
+      40, 40, 40,
+      40, 80, 40,
+      40, 40, 40,
+    ]);
+
+    const result = analyzeFrame(frame, {
+      threshold: 240,
+      contrastEnabled: false,
+      contrastMinRatio: 1.5,
+    });
+
+    expect(Array.from(result)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it('enables contrast detection by default', () => {
+    const frame = makeGridFrame(3, 3, [
+      40, 40, 40,
+      40, 80, 40,
+      40, 40, 40,
+    ]);
+
+    const result = analyzeFrame(frame, { threshold: 240 });
+
+    expect(Array.from(result)).toEqual([0, 0, 0, 0, 1, 0, 0, 0, 0]);
+  });
+
+  it('guards against near-zero neighbor averages causing false positives', () => {
+    const frame = makeGridFrame(3, 3, [
+      0, 0, 0,
+      0, 2, 0,
+      0, 0, 0,
+    ]);
+
+    const result = analyzeFrame(frame, {
+      threshold: 240,
+      contrastEnabled: true,
+      contrastMinRatio: 1.5,
+    });
+
+    expect(Array.from(result)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+});
+
 describe('detectHotPixels temporal run filter', () => {
   it('rejects sparse temporal hits when min run ratio is enabled', () => {
     // One pixel hot on alternating frames: count is high, run length is short.
@@ -84,6 +174,66 @@ describe('detectHotPixels temporal run filter', () => {
       minConsistency: 0.5,
       temporalMinRunRatio: 0.5,
     });
+
+    expect(result.pixels.size).toBe(1);
+  });
+});
+
+describe('detectHotPixels variance filter', () => {
+  it('filters candidates with high temporal brightness variance', () => {
+    const frameResults = [
+      new Uint8Array([1]),
+      new Uint8Array([1]),
+      new Uint8Array([0]),
+      new Uint8Array([1]),
+    ];
+    const frameBrightnessMaps = [
+      new Uint8Array([255]),
+      new Uint8Array([10]),
+      new Uint8Array([250]),
+      new Uint8Array([15]),
+    ];
+
+    const result = detectHotPixels(
+      frameResults,
+      1,
+      1,
+      {
+        minConsistency: 0.5,
+        varianceFilterEnabled: true,
+        varianceMaxThreshold: 100,
+      },
+      frameBrightnessMaps
+    );
+
+    expect(result.pixels.size).toBe(0);
+  });
+
+  it('keeps candidates with low temporal brightness variance', () => {
+    const frameResults = [
+      new Uint8Array([1]),
+      new Uint8Array([1]),
+      new Uint8Array([1]),
+      new Uint8Array([1]),
+    ];
+    const frameBrightnessMaps = [
+      new Uint8Array([200]),
+      new Uint8Array([202]),
+      new Uint8Array([199]),
+      new Uint8Array([201]),
+    ];
+
+    const result = detectHotPixels(
+      frameResults,
+      1,
+      1,
+      {
+        minConsistency: 0.5,
+        varianceFilterEnabled: true,
+        varianceMaxThreshold: 100,
+      },
+      frameBrightnessMaps
+    );
 
     expect(result.pixels.size).toBe(1);
   });
