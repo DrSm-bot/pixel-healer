@@ -30,3 +30,7 @@ coverage/
 
 # Local development
 *.local
+
+# Local full-resolution fixture stacks (kept out of git)
+tests/fixtures/local/*
+!tests/fixtures/local/.gitkeep

@@ -77,7 +77,7 @@ export function AnalysisView() {
           setSampleFrameData(imageData);
         }
 
-        const result = analyzeFrame(imageData, detectionOptions.threshold ?? 240);
+        const result = analyzeFrame(imageData, detectionOptions);
         frameResults.push(result);
       }
 
@@ -152,7 +152,8 @@ export function AnalysisView() {
                   disabled={isAnalyzing}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Higher = fewer false positives, lower = more sensitive
+                  Higher = fewer false positives, lower = more sensitive.
+                  Adaptive thresholding is enabled by default.
                 </p>
               </div>
 

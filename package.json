@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx",
     "typecheck": "tsc --noEmit",
-    "test": "vitest"
+    "test": "vitest",
+    "test:local": "vitest --run --config vitest.local.config.ts"
   },
   "dependencies": {
     "comlink": "^4.4.2",

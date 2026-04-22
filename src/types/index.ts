@@ -74,6 +74,20 @@ export interface DetectionOptions {
   minConsistency?: number;
   /** Number of frames to sample for analysis, default 10 */
   sampleFrames?: number;
+  /** Enable per-frame adaptive thresholding (default false) */
+  adaptiveThreshold?: boolean;
+  /** Brightness percentile used for adaptive thresholding (0-1, default 0.999) */
+  adaptivePercentile?: number;
+  /** Lower clamp for adaptive threshold (0-255, default 220) */
+  adaptiveMinThreshold?: number;
+  /** Upper clamp for adaptive threshold (0-255, default 255) */
+  adaptiveMaxThreshold?: number;
+  /** Minimum consecutive-hot run ratio required across sampled frames (0-1, default 0 = disabled) */
+  temporalMinRunRatio?: number;
+  /** Enable spatial isolation filtering after temporal/consistency checks (default false) */
+  spatialIsolationEnabled?: boolean;
+  /** Maximum number of hot neighbors (8-neighborhood) allowed for a hot pixel (default 8) */
+  spatialMaxHotNeighbors?: number;
 }
 
 /**
