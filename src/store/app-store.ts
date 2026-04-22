@@ -63,6 +63,8 @@ const initialState = {
   },
   detectionOptions: {
     threshold: 240,
+    contrastEnabled: true,
+    contrastMinRatio: 1.5,
     minConsistency: 0.9,
     sampleFrames: 10,
     adaptiveThreshold: false,

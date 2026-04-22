@@ -70,6 +70,10 @@ export interface HotPixelMap {
 export interface DetectionOptions {
   /** Brightness threshold (0-255), default 240 */
   threshold?: number;
+  /** Enable local 8-neighbor contrast analysis (default true) */
+  contrastEnabled?: boolean;
+  /** Minimum brightness-to-neighborhood ratio for contrast detection (default 1.5) */
+  contrastMinRatio?: number;
   /** Minimum consistency across frames (0-1), default 0.9 */
   minConsistency?: number;
   /** Number of frames to sample for analysis, default 10 */

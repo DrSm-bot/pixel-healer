@@ -10,6 +10,8 @@
 
 import type { HotPixelMap, HotPixel, DetectionOptions } from '@/types';
 
+const MIN_CONTRAST_NEIGHBOR_AVG = 8;
+
 /**
  * Analyze a single frame and count hot pixels.
  * Returns a binary map where each element is 1 if hot, otherwise 0.
@@ -26,13 +28,19 @@ export function analyzeFrame(
   const result = new Uint8Array(pixelCount);
 
   const threshold = resolveThreshold(imageData, options);
+  const contrastEnabled = options.contrastEnabled ?? true;
+  const contrastMinRatio = Math.max(1, options.contrastMinRatio ?? 1.5);
 
   for (let i = 0; i < pixelCount; i++) {
-    const idx = i * 4;
-    // Get max of RGB channels as brightness
-    const brightness = Math.max(data[idx]!, data[idx + 1]!, data[idx + 2]!);
-    // Store 1 if hot, 0 if not
-    result[i] = brightness >= threshold ? 1 : 0;
+    const x = i % width;
+    const y = Math.floor(i / width);
+    const brightness = getPixelBrightness(data, i);
+    const passesAbsoluteThreshold = brightness >= threshold;
+    const passesContrastThreshold =
+      contrastEnabled &&
+      passesContrastCheck(data, x, y, width, height, brightness, contrastMinRatio);
+
+    result[i] = passesAbsoluteThreshold || passesContrastThreshold ? 1 : 0;
   }
 
   return result;
@@ -78,6 +86,49 @@ function getBrightnessPercentileThreshold(imageData: ImageData, percentile: numb
   }
 
   return 255;
+}
+
+function getPixelBrightness(data: Uint8ClampedArray, pixelIndex: number): number {
+  const idx = pixelIndex * 4;
+  return Math.max(data[idx]!, data[idx + 1]!, data[idx + 2]!);
+}
+
+function passesContrastCheck(
+  data: Uint8ClampedArray,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  brightness: number,
+  contrastMinRatio: number
+): boolean {
+  let neighborBrightnessSum = 0;
+  let neighborCount = 0;
+
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+
+      neighborBrightnessSum += getPixelBrightness(data, ny * width + nx);
+      neighborCount++;
+    }
+  }
+
+  if (neighborCount === 0) {
+    return false;
+  }
+
+  const neighborAvg = neighborBrightnessSum / neighborCount;
+  if (neighborAvg <= 0) {
+    return false;
+  }
+
+  const safeNeighborAvg = Math.max(neighborAvg, MIN_CONTRAST_NEIGHBOR_AVG);
+  return brightness / safeNeighborAvg >= contrastMinRatio;
 }
 
 export function detectHotPixels(

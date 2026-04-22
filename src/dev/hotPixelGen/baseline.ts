@@ -43,9 +43,7 @@ export async function runBaselineEvaluation(options: BaselineOptions = {}): Prom
     cleanFrames,
     mask,
     detect: async (frames) => {
-      const analyzedFrames = frames.map((frame) =>
-        analyzeFrame(frame, detectionOptions.threshold ?? 180)
-      );
+      const analyzedFrames = frames.map((frame) => analyzeFrame(frame, detectionOptions));
       const detected = detectHotPixels(analyzedFrames, width, height, detectionOptions);
 
       return new Set(

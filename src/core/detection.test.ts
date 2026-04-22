@@ -45,6 +45,80 @@ describe('analyzeFrame adaptive thresholding', () => {
   });
 });
 
+describe('analyzeFrame contrast detection', () => {
+  function makeGridFrame(width: number, height: number, values: number[]): ImageData {
+    const data = new Uint8ClampedArray(values.length * 4);
+    values.forEach((value, index) => {
+      const offset = index * 4;
+      data[offset] = value;
+      data[offset + 1] = value;
+      data[offset + 2] = value;
+      data[offset + 3] = 255;
+    });
+    return new ImageData(data, width, height);
+  }
+
+  it('detects a hot pixel via contrast when below the absolute threshold', () => {
+    const frame = makeGridFrame(3, 3, [
+      40, 40, 40,
+      40, 80, 40,
+      40, 40, 40,
+    ]);
+
+    const result = analyzeFrame(frame, {
+      threshold: 240,
+      contrastEnabled: true,
+      contrastMinRatio: 1.5,
+    });
+
+    expect(Array.from(result)).toEqual([0, 0, 0, 0, 1, 0, 0, 0, 0]);
+  });
+
+  it('keeps contrast detection disabled when requested', () => {
+    const frame = makeGridFrame(3, 3, [
+      40, 40, 40,
+      40, 80, 40,
+      40, 40, 40,
+    ]);
+
+    const result = analyzeFrame(frame, {
+      threshold: 240,
+      contrastEnabled: false,
+      contrastMinRatio: 1.5,
+    });
+
+    expect(Array.from(result)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it('enables contrast detection by default', () => {
+    const frame = makeGridFrame(3, 3, [
+      40, 40, 40,
+      40, 80, 40,
+      40, 40, 40,
+    ]);
+
+    const result = analyzeFrame(frame, { threshold: 240 });
+
+    expect(Array.from(result)).toEqual([0, 0, 0, 0, 1, 0, 0, 0, 0]);
+  });
+
+  it('guards against near-zero neighbor averages causing false positives', () => {
+    const frame = makeGridFrame(3, 3, [
+      0, 0, 0,
+      0, 2, 0,
+      0, 0, 0,
+    ]);
+
+    const result = analyzeFrame(frame, {
+      threshold: 240,
+      contrastEnabled: true,
+      contrastMinRatio: 1.5,
+    });
+
+    expect(Array.from(result)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+});
+
 describe('detectHotPixels temporal run filter', () => {
   it('rejects sparse temporal hits when min run ratio is enabled', () => {
     // One pixel hot on alternating frames: count is high, run length is short.

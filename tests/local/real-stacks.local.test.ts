@@ -19,6 +19,8 @@ const PROFILE_NAMES = ['easy', 'typical', 'nasty', 'pathological'] as const;
 const DEFAULT_SEED = Number(process.env.PIXEL_HEALER_LOCAL_SEED ?? 1337);
 const LOCAL_DETECTION_OPTIONS: DetectionOptions = {
   threshold: Number(process.env.PIXEL_HEALER_LOCAL_THRESHOLD ?? 240),
+  contrastEnabled: process.env.PIXEL_HEALER_LOCAL_CONTRAST !== '0',
+  contrastMinRatio: Number(process.env.PIXEL_HEALER_LOCAL_CONTRAST_MIN_RATIO ?? 1.5),
   minConsistency: Number(process.env.PIXEL_HEALER_LOCAL_MIN_CONSISTENCY ?? 0.9),
   adaptiveThreshold: process.env.PIXEL_HEALER_LOCAL_ADAPTIVE !== '0',
   adaptivePercentile: Number(process.env.PIXEL_HEALER_LOCAL_ADAPTIVE_PERCENTILE ?? 0.999),
@@ -213,7 +215,7 @@ function logReport(stackName: string, profileName: string, report: EvalReport): 
   const psnr = Number.isFinite(report.psnrVsClean) ? report.psnrVsClean.toFixed(3) : '∞';
 
   console.info(
-    `[local-fixture] stack=${stackName} profile=${profileName} seed=${DEFAULT_SEED} adaptive=${LOCAL_DETECTION_OPTIONS.adaptiveThreshold ? 'on' : 'off'} p=${LOCAL_DETECTION_OPTIONS.adaptivePercentile ?? '-'} minRun=${LOCAL_DETECTION_OPTIONS.temporalMinRunRatio ?? 0} spatial=${LOCAL_DETECTION_OPTIONS.spatialIsolationEnabled ? 'on' : 'off'} maxN=${LOCAL_DETECTION_OPTIONS.spatialMaxHotNeighbors ?? '-'} precision=${report.precision.toFixed(3)} recall=${report.recall.toFixed(3)} f1=${report.f1.toFixed(3)} psnr=${psnr} ssim=${report.ssimVsClean.toFixed(3)} runtimeMs=${runtimeMs.toFixed(1)}`
+    `[local-fixture] stack=${stackName} profile=${profileName} seed=${DEFAULT_SEED} contrast=${LOCAL_DETECTION_OPTIONS.contrastEnabled ? 'on' : 'off'} cMin=${LOCAL_DETECTION_OPTIONS.contrastMinRatio ?? '-'} adaptive=${LOCAL_DETECTION_OPTIONS.adaptiveThreshold ? 'on' : 'off'} p=${LOCAL_DETECTION_OPTIONS.adaptivePercentile ?? '-'} minRun=${LOCAL_DETECTION_OPTIONS.temporalMinRunRatio ?? 0} spatial=${LOCAL_DETECTION_OPTIONS.spatialIsolationEnabled ? 'on' : 'off'} maxN=${LOCAL_DETECTION_OPTIONS.spatialMaxHotNeighbors ?? '-'} precision=${report.precision.toFixed(3)} recall=${report.recall.toFixed(3)} f1=${report.f1.toFixed(3)} psnr=${psnr} ssim=${report.ssimVsClean.toFixed(3)} runtimeMs=${runtimeMs.toFixed(1)}`
   );
 }
 
