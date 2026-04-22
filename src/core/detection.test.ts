@@ -74,6 +74,22 @@ describe('analyzeFrame contrast detection', () => {
     expect(Array.from(result)).toEqual([0, 0, 0, 0, 1, 0, 0, 0, 0]);
   });
 
+  it('detects hot pixels in fully dark neighborhoods using the min-average clamp', () => {
+    const frame = makeGridFrame(3, 3, [
+      0, 0, 0,
+      0, 20, 0,
+      0, 0, 0,
+    ]);
+
+    const result = analyzeFrame(frame, {
+      threshold: 240,
+      contrastEnabled: true,
+      contrastMinRatio: 1.5,
+    });
+
+    expect(Array.from(result)).toEqual([0, 0, 0, 0, 1, 0, 0, 0, 0]);
+  });
+
   it('keeps contrast detection disabled when requested', () => {
     const frame = makeGridFrame(3, 3, [
       40, 40, 40,

@@ -123,10 +123,6 @@ function passesContrastCheck(
   }
 
   const neighborAvg = neighborBrightnessSum / neighborCount;
-  if (neighborAvg <= 0) {
-    return false;
-  }
-
   const safeNeighborAvg = Math.max(neighborAvg, MIN_CONTRAST_NEIGHBOR_AVG);
   return brightness / safeNeighborAvg >= contrastMinRatio;
 }
