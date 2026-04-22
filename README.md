@@ -86,6 +86,32 @@ Pixel Healer includes a dev-only synthetic corruption + evaluation harness for r
 - CI/test flow includes a fixed typical-profile baseline gate and fails if F1 drops below the documented floor (`0.45`)
 - Shipping policy: dev-only (`src/dev/**`), dynamically imported behind `import.meta.env.DEV`
 
+### Local Full-Resolution Harness Tests
+
+For realistic, non-downscaled evaluation on private stacks:
+
+1. Put full-res frames under `~/stacks/stack1` and `~/stacks/stack2` (or another custom root)
+2. Link them into local fixtures:
+   - `./scripts/setup-local-fixtures.sh`
+3. Run local evaluation:
+   - `pnpm test:local`
+
+The local test reads `tests/fixtures/local/*` (gitignored), injects synthetic hot pixels on top of those real frames, and reports precision/recall/F1, PSNR/SSIM, and runtime for all four profiles.
+
+If your machine reports a `canvas` module error, install/build canvas native dependencies first.
+
+### Detection Tuning Status (Current)
+
+Recent detection tuning focused on reducing false positives on real full-resolution stacks:
+
+- ✅ **Step 1:** Adaptive per-frame thresholding (percentile + clamps)
+- ✅ **Step 2:** Temporal persistence filter (`temporalMinRunRatio`)
+- ✅ **Step 3:** Spatial isolation filter (`spatialIsolationEnabled`, `spatialMaxHotNeighbors`)
+- 🚧 **Step 4a (next):** Contrast-based neighborhood feature (local context signal)
+- 🚧 **Step 4b (next):** Temporal variance feature (separate stable hot pixels from moving stars)
+
+Current snapshot: `easy` profile improved strongly, while `typical` remains below target and needs the planned 4a/4b feature pass.
+
 ## Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.

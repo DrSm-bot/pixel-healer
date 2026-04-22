@@ -2,7 +2,7 @@
 
 *Browser-based hot pixel removal for astrophotography time-lapses*
 
-Last updated: 2026-04-20 (Phase 3a Step 3 complete)
+Last updated: 2026-04-22 (Detection tuning Step 1–3 complete; Step 4a/4b planned)
 
 ## Problem Statement
 
@@ -146,6 +146,28 @@ The panel reports precision, recall, F1, PSNR, SSIM, and runtime for the current
 
 `npm test` includes a deterministic synthetic baseline check using the `typical` profile and fixed seed `1337`. The gate currently fails if baseline F1 drops below `0.45`, which is below the observed current baseline but high enough to catch clear regressions in detection behavior.
 
+For realistic local-only validation on full-resolution private stacks, use `pnpm test:local`. That test consumes fixture directories from `tests/fixtures/local/*` (gitignored) and runs all four synthetic profiles on top of real frames.
+
+### Parallel Track: Detection Tuning (real-stack quality pass) 🚧
+
+Goal: improve recall on `typical` without reintroducing major false positives.
+
+Completed tuning slices:
+- [x] **Step 1 — Adaptive thresholding** (per-frame percentile threshold + clamps)
+- [x] **Step 2 — Temporal persistence** (`temporalMinRunRatio`)
+- [x] **Step 3 — Spatial isolation** (`spatialIsolationEnabled`, `spatialMaxHotNeighbors`)
+
+Observed outcome so far:
+- `easy` profile improved significantly on both local stacks
+- `typical` profile remains materially below target
+
+Next planned slices:
+- [ ] **Step 4a — Contrast-based neighborhood feature** (local contrast signal)
+- [ ] **Step 4b — Temporal variance feature** (stable-vs-moving pixel discrimination)
+
+Decision gate after 4a/4b:
+- If `typical` still stays below ~`0.6`, re-baseline expectations for harder profiles and document constraints explicitly.
+
 ### Phase 3b: Review UX
 - [ ] Manual add/remove hot pixels (click to toggle)
 - [ ] Before/after comparison slider
@@ -239,3 +261,4 @@ Users can:
 | #8 | Phase 3a Step 1: synthetic generator core | ✅ Merged |
 | #9 | Phase 3a Step 2: evaluation harness + baseline metrics | ✅ Merged |
 | #10 | Phase 3a Step 3: dev panel + regression gate + docs | ✅ Merged |
+| #11 | Docs: final sync after Phase 3a merge train | ✅ Merged |
