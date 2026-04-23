@@ -21,7 +21,7 @@ export function ProcessingView() {
     setOutputSettings,
   } = useAppStore();
 
-  const { loadImageData, saveImageData, saveImageToDirectory, saveImageToDirectorySafe, selectOutputDirectory } =
+  const { loadImageData, saveImageToDirectory, saveImageToDirectorySafe, selectOutputDirectory } =
     useFileSystem();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -269,7 +269,6 @@ export function ProcessingView() {
     hotPixelMap,
     outputSettings,
     loadImageData,
-    saveImageData,
     saveImageToDirectory,
     saveImageToDirectorySafe,
     getOutputFormat,
