@@ -43,6 +43,19 @@ describe('analyzeFrame adaptive thresholding', () => {
 
     expect(Array.from(result)).toEqual([0, 0, 0, 1]);
   });
+
+  it('normalizes adaptive bounds when minimum is greater than maximum', () => {
+    const frame = makeFrame([10, 20, 200, 250]);
+    const result = analyzeFrame(frame, {
+      adaptiveThreshold: true,
+      adaptivePercentile: 0.75,
+      adaptiveMinThreshold: 240,
+      adaptiveMaxThreshold: 120,
+      contrastEnabled: false,
+    });
+
+    expect(Array.from(result)).toEqual([0, 0, 1, 1]);
+  });
 });
 
 describe('analyzeFrame contrast detection', () => {

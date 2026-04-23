@@ -14,7 +14,7 @@ import type { DetectionOptions, SensitivityPreset } from '@/types';
  * - Normal: Balanced detection (matches optimized defaults from main)
  * - High: Aggressive detection, more sensitive, may include more detections
  */
-export const SENSITIVITY_PRESETS: Record<SensitivityPreset, Partial<DetectionOptions>> = {
+export const SENSITIVITY_PRESETS: Record<SensitivityPreset, DetectionOptions> = {
   low: {
     threshold: 240,
     contrastEnabled: true,
@@ -66,6 +66,13 @@ export const SENSITIVITY_PRESETS: Record<SensitivityPreset, Partial<DetectionOpt
   },
 };
 
+export const DEFAULT_SENSITIVITY_PRESET: SensitivityPreset = 'normal';
+export const DEFAULT_DETECTION_OPTIONS: DetectionOptions = {
+  ...SENSITIVITY_PRESETS[DEFAULT_SENSITIVITY_PRESET],
+};
+
+const PRESET_MATCH_KEYS = Object.keys(DEFAULT_DETECTION_OPTIONS) as Array<keyof DetectionOptions>;
+
 /**
  * Descriptions for each sensitivity level
  */
@@ -82,6 +89,10 @@ export function applySensitivityPreset(preset: SensitivityPreset): DetectionOpti
   return { ...SENSITIVITY_PRESETS[preset] };
 }
 
+export function withDetectionDefaults(options: DetectionOptions = {}): DetectionOptions {
+  return { ...DEFAULT_DETECTION_OPTIONS, ...options };
+}
+
 /**
  * Determine if current options match a preset
  */
@@ -89,21 +100,12 @@ export function matchesPreset(
   options: DetectionOptions,
   preset: SensitivityPreset
 ): boolean {
-  const presetOptions = SENSITIVITY_PRESETS[preset];
+  const normalizedOptions = withDetectionDefaults(options);
+  const normalizedPreset = withDetectionDefaults(SENSITIVITY_PRESETS[preset]);
 
-  // Check key parameters that define each preset
-  const keyParams: Array<keyof DetectionOptions> = [
-    'contrastMinRatio',
-    'minConsistency',
-    'temporalMinRunRatio',
-    'varianceMaxThreshold',
-  ];
-
-  return keyParams.every((key) => {
-    const currentValue = options[key];
-    const presetValue = presetOptions[key];
-    return currentValue === presetValue;
-  });
+  // Matching semantics:
+  // a preset is active only when all preset-controlled detection fields are equal.
+  return PRESET_MATCH_KEYS.every((key) => normalizedOptions[key] === normalizedPreset[key]);
 }
 
 /**

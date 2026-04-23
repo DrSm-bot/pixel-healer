@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { DEFAULT_DETECTION_OPTIONS } from '@/core/presets';
 import type {
   AppStep,
   AppError,
@@ -62,24 +63,7 @@ const initialState = {
     outputDir: null,
     allowOverwrite: false,
   },
-  detectionOptions: {
-    // Optimized defaults for best F1 scores across different image types
-    // These match the 'normal' preset
-    threshold: 240,
-    contrastEnabled: true,
-    contrastMinRatio: 1.3, // Lowered from 1.5 for better recall on subtle hot pixels
-    minConsistency: 0.9,
-    sampleFrames: 10,
-    adaptiveThreshold: true, // Enabled by default - works better across different cameras/ISOs
-    adaptivePercentile: 0.995, // 99.5th percentile
-    adaptiveMinThreshold: 200, // Lowered to catch dimmer hot pixels
-    adaptiveMaxThreshold: 255,
-    temporalMinRunRatio: 0.875,
-    spatialIsolationEnabled: true,
-    spatialMaxHotNeighbors: 0,
-    varianceFilterEnabled: true,
-    varianceMaxThreshold: 100,
-  },
+  detectionOptions: { ...DEFAULT_DETECTION_OPTIONS },
   hotPixelMap: null,
   sampleFrameData: null,
   previewUrl: null,
