@@ -11,6 +11,7 @@ import {
 import type { SensitivityPreset } from '@/types';
 import { resetAnalyzeState } from './analysis-state';
 import { AdvancedSettings } from './AnalysisView/AdvancedSettings';
+import { BeforeAfterComparison } from './AnalysisView/BeforeAfterComparison';
 import { ManualEditPanel } from './AnalysisView/ManualEditPanel';
 
 export function AnalysisView() {
@@ -18,6 +19,7 @@ export function AnalysisView() {
   const step = useAppStore((s) => s.step);
   const inputFiles = useAppStore((s) => s.inputFiles);
   const hotPixelMap = useAppStore((s) => s.hotPixelMap);
+  const sampleFrameData = useAppStore((s) => s.sampleFrameData);
   const detectionOptions = useAppStore((s) => s.detectionOptions);
   const previewUrl = useAppStore((s) => s.previewUrl);
   const setHotPixelMap = useAppStore((s) => s.setHotPixelMap);
@@ -232,6 +234,14 @@ export function AnalysisView() {
               </div>
             )}
           </div>
+        )}
+
+        {isReviewStep && (
+          <BeforeAfterComparison
+            sampleFrameData={sampleFrameData}
+            hotPixelMap={hotPixelMap}
+            fallbackBeforeUrl={previewUrl}
+          />
         )}
 
         {isReviewStep && hotPixelMap && (
