@@ -3,6 +3,12 @@ import { useAppStore } from '@/store/app-store';
 import { useFileSystem } from '@/hooks/useFileSystem';
 import { selectSampleFrames, analyzeFrame, detectHotPixels, extractBrightnessMap } from '@/core/detection';
 import { imageDataToDataUrl, revokeDataUrl, createHotPixelOverlay } from '@/core/image-utils';
+import {
+  SENSITIVITY_DESCRIPTIONS,
+  applySensitivityPreset,
+  detectActivePreset,
+} from '@/core/presets';
+import type { SensitivityPreset, DetectionOptions } from '@/types';
 
 export function AnalysisView() {
   // Use individual selectors for better re-render behavior
@@ -11,17 +17,22 @@ export function AnalysisView() {
   const hotPixelMap = useAppStore((s) => s.hotPixelMap);
   const detectionOptions = useAppStore((s) => s.detectionOptions);
   const previewUrl = useAppStore((s) => s.previewUrl);
+  const uiMode = useAppStore((s) => s.uiMode);
   const setHotPixelMap = useAppStore((s) => s.setHotPixelMap);
   const setSampleFrameData = useAppStore((s) => s.setSampleFrameData);
   const setPreviewUrl = useAppStore((s) => s.setPreviewUrl);
   const setStep = useAppStore((s) => s.setStep);
   const setError = useAppStore((s) => s.setError);
   const setProgress = useAppStore((s) => s.setProgress);
+  const setDetectionOptions = useAppStore((s) => s.setDetectionOptions);
+  const setUiMode = useAppStore((s) => s.setUiMode);
+  const setSensitivityPreset = useAppStore((s) => s.setSensitivityPreset);
 
   const { loadImageData } = useFileSystem();
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
+  const [advancedExpanded, setAdvancedExpanded] = useState(false);
+
   // Determine if we're in review mode
   const isReviewStep = step === 'review';
 
@@ -33,6 +44,18 @@ export function AnalysisView() {
       }
     };
   }, [previewUrl]);
+
+  const handleSensitivityChange = useCallback(
+    (preset: SensitivityPreset) => {
+      setSensitivityPreset(preset);
+      const presetOptions = applySensitivityPreset(preset);
+      setDetectionOptions(presetOptions);
+    },
+    [setSensitivityPreset, setDetectionOptions]
+  );
+
+  // Detect which preset (if any) matches current options
+  const activePreset = detectActivePreset(detectionOptions);
 
   const handleAnalyze = useCallback(async () => {
     setIsAnalyzing(true);
@@ -134,59 +157,117 @@ export function AnalysisView() {
         <p className="text-gray-400 mb-6">
           {isReviewStep
             ? `${hotPixelMap?.pixels.size ?? 0} hot pixels detected. Review and continue to processing.`
-            : `${inputFiles.length} images found. Click analyze to detect hot pixels.`}
+            : `${inputFiles.length} images found. Configure detection settings and click analyze.`}
         </p>
 
         {!isReviewStep && (
-          <div className="bg-cosmos-900/50 rounded-lg p-6 mb-6">
-            <h3 className="font-semibold mb-4">Detection Settings</h3>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">
-                  Brightness Threshold: {detectionOptions.threshold}
-                </label>
-                <input
-                  type="range"
-                  min="200"
-                  max="255"
-                  value={detectionOptions.threshold}
-                  onChange={(e) =>
-                    useAppStore.getState().setDetectionOptions({
-                      threshold: parseInt(e.target.value),
-                    })
-                  }
-                  className="w-full"
-                  disabled={isAnalyzing}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Higher = fewer false positives, lower = more sensitive.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">
-                  Sample Frames: {detectionOptions.sampleFrames}
-                </label>
-                <input
-                  type="range"
-                  min="5"
-                  max="20"
-                  value={detectionOptions.sampleFrames}
-                  onChange={(e) =>
-                    useAppStore.getState().setDetectionOptions({
-                      sampleFrames: parseInt(e.target.value),
-                    })
-                  }
-                  className="w-full"
-                  disabled={isAnalyzing}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  More frames = better accuracy, slower analysis
-                </p>
-              </div>
+          <>
+            {/* Simple/Advanced Mode Toggle */}
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => setUiMode('simple')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  uiMode === 'simple'
+                    ? 'bg-cosmos-600 text-white'
+                    : 'bg-cosmos-900/50 text-gray-400 hover:text-white'
+                }`}
+              >
+                Simple
+              </button>
+              <button
+                onClick={() => setUiMode('advanced')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  uiMode === 'advanced'
+                    ? 'bg-cosmos-600 text-white'
+                    : 'bg-cosmos-900/50 text-gray-400 hover:text-white'
+                }`}
+              >
+                Advanced
+              </button>
             </div>
-          </div>
+
+            {/* Simple Mode */}
+            {uiMode === 'simple' && (
+              <div className="bg-cosmos-900/50 rounded-lg p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold">Detection Sensitivity</h3>
+                  {!activePreset && (
+                    <span className="text-xs px-2 py-1 bg-cosmos-700 text-cosmos-300 rounded">
+                      Custom
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-400 mb-4">
+                  Choose how aggressively to detect hot pixels. Start with Normal and adjust if needed.
+                </p>
+
+                <div className="grid grid-cols-1 gap-3">
+                  {(['low', 'normal', 'high'] as const).map((preset) => {
+                    const isActive = activePreset === preset;
+                    return (
+                      <label
+                        key={preset}
+                        className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                          isActive
+                            ? 'border-cosmos-500 bg-cosmos-800/30'
+                            : 'border-cosmos-700 hover:border-cosmos-600'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="sensitivity"
+                          value={preset}
+                          checked={isActive}
+                          onChange={() => handleSensitivityChange(preset)}
+                          className="mt-1"
+                          disabled={isAnalyzing}
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium capitalize">{preset}</div>
+                          <div className="text-sm text-gray-400">
+                            {SENSITIVITY_DESCRIPTIONS[preset]}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => setAdvancedExpanded(!advancedExpanded)}
+                  className="mt-6 text-sm text-cosmos-400 hover:text-cosmos-300 flex items-center gap-2"
+                >
+                  <span>{advancedExpanded ? '▼' : '▶'}</span>
+                  <span>Advanced Settings</span>
+                </button>
+
+                {advancedExpanded && (
+                  <div className="mt-4 pt-4 border-t border-cosmos-700">
+                    <AdvancedSettings
+                      detectionOptions={detectionOptions}
+                      setDetectionOptions={setDetectionOptions}
+                      isAnalyzing={isAnalyzing}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Advanced Mode */}
+            {uiMode === 'advanced' && (
+              <div className="bg-cosmos-900/50 rounded-lg p-6 mb-6">
+                <h3 className="font-semibold mb-4">Advanced Detection Settings</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  Fine-tune all detection parameters. Changes here override preset values.
+                </p>
+                <AdvancedSettings
+                  detectionOptions={detectionOptions}
+                  setDetectionOptions={setDetectionOptions}
+                  isAnalyzing={isAnalyzing}
+                />
+              </div>
+            )}
+          </>
         )}
 
         {isReviewStep && hotPixelMap && (
@@ -241,7 +322,7 @@ export function AnalysisView() {
               <button
                 onClick={handleAnalyze}
                 disabled={isAnalyzing}
-                className="flex-1 px-6 py-3 bg-cosmos-600 hover:bg-cosmos-500 
+                className="flex-1 px-6 py-3 bg-cosmos-600 hover:bg-cosmos-500
                            disabled:bg-cosmos-800 disabled:cursor-not-allowed
                            rounded-lg font-semibold transition-colors"
               >
@@ -271,6 +352,197 @@ export function AnalysisView() {
             />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Advanced Settings Component (shared between Simple collapsed and Advanced mode)
+function AdvancedSettings({
+  detectionOptions,
+  setDetectionOptions,
+  isAnalyzing,
+}: {
+  detectionOptions: DetectionOptions;
+  setDetectionOptions: (options: Partial<DetectionOptions>) => void;
+  isAnalyzing: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label className="block text-sm text-gray-400 mb-1">
+          Brightness Threshold: {detectionOptions.threshold}
+        </label>
+        <input
+          type="range"
+          min="200"
+          max="255"
+          value={detectionOptions.threshold}
+          onChange={(e) => setDetectionOptions({ threshold: parseInt(e.target.value) })}
+          className="w-full"
+          disabled={isAnalyzing}
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Absolute brightness level (0-255)
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm text-gray-400 mb-1">
+          Sample Frames: {detectionOptions.sampleFrames}
+        </label>
+        <input
+          type="range"
+          min="5"
+          max="20"
+          value={detectionOptions.sampleFrames}
+          onChange={(e) => setDetectionOptions({ sampleFrames: parseInt(e.target.value) })}
+          className="w-full"
+          disabled={isAnalyzing}
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          More frames = better accuracy, slower analysis
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm text-gray-400 mb-1">
+          Contrast Min Ratio: {detectionOptions.contrastMinRatio?.toFixed(1)}
+        </label>
+        <input
+          type="range"
+          min="1.0"
+          max="3.0"
+          step="0.1"
+          value={detectionOptions.contrastMinRatio ?? 1.3}
+          onChange={(e) => setDetectionOptions({ contrastMinRatio: parseFloat(e.target.value) })}
+          className="w-full"
+          disabled={isAnalyzing}
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          How much brighter than neighbors
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm text-gray-400 mb-1">
+          Min Consistency: {(detectionOptions.minConsistency ?? 0.9) * 100}%
+        </label>
+        <input
+          type="range"
+          min="0.5"
+          max="1.0"
+          step="0.05"
+          value={detectionOptions.minConsistency ?? 0.9}
+          onChange={(e) => setDetectionOptions({ minConsistency: parseFloat(e.target.value) })}
+          className="w-full"
+          disabled={isAnalyzing}
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          % of frames where pixel must be hot
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm text-gray-400 mb-1">
+          Temporal Min Run Ratio: {(detectionOptions.temporalMinRunRatio ?? 0.875) * 100}%
+        </label>
+        <input
+          type="range"
+          min="0.5"
+          max="1.0"
+          step="0.05"
+          value={detectionOptions.temporalMinRunRatio ?? 0.875}
+          onChange={(e) =>
+            setDetectionOptions({ temporalMinRunRatio: parseFloat(e.target.value) })
+          }
+          className="w-full"
+          disabled={isAnalyzing}
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Consecutive-frame persistence requirement
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm text-gray-400 mb-1">
+          Variance Max Threshold: {detectionOptions.varianceMaxThreshold}
+        </label>
+        <input
+          type="range"
+          min="50"
+          max="200"
+          step="10"
+          value={detectionOptions.varianceMaxThreshold ?? 100}
+          onChange={(e) =>
+            setDetectionOptions({ varianceMaxThreshold: parseInt(e.target.value) })
+          }
+          className="w-full"
+          disabled={isAnalyzing}
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Max brightness variance for hot pixels
+        </p>
+      </div>
+
+      <div>
+        <label className="flex items-center gap-2 text-sm text-gray-400">
+          <input
+            type="checkbox"
+            checked={detectionOptions.adaptiveThreshold ?? true}
+            onChange={(e) => setDetectionOptions({ adaptiveThreshold: e.target.checked })}
+            disabled={isAnalyzing}
+          />
+          <span>Adaptive Threshold</span>
+        </label>
+        <p className="text-xs text-gray-500 mt-1">
+          Per-frame percentile-based threshold
+        </p>
+      </div>
+
+      <div>
+        <label className="flex items-center gap-2 text-sm text-gray-400">
+          <input
+            type="checkbox"
+            checked={detectionOptions.contrastEnabled ?? true}
+            onChange={(e) => setDetectionOptions({ contrastEnabled: e.target.checked })}
+            disabled={isAnalyzing}
+          />
+          <span>Contrast Detection</span>
+        </label>
+        <p className="text-xs text-gray-500 mt-1">
+          Local 8-neighbor contrast check
+        </p>
+      </div>
+
+      <div>
+        <label className="flex items-center gap-2 text-sm text-gray-400">
+          <input
+            type="checkbox"
+            checked={detectionOptions.spatialIsolationEnabled ?? true}
+            onChange={(e) => setDetectionOptions({ spatialIsolationEnabled: e.target.checked })}
+            disabled={isAnalyzing}
+          />
+          <span>Spatial Isolation Filter</span>
+        </label>
+        <p className="text-xs text-gray-500 mt-1">
+          Filter clustered detections
+        </p>
+      </div>
+
+      <div>
+        <label className="flex items-center gap-2 text-sm text-gray-400">
+          <input
+            type="checkbox"
+            checked={detectionOptions.varianceFilterEnabled ?? true}
+            onChange={(e) => setDetectionOptions({ varianceFilterEnabled: e.target.checked })}
+            disabled={isAnalyzing}
+          />
+          <span>Variance Filter</span>
+        </label>
+        <p className="text-xs text-gray-500 mt-1">
+          Temporal brightness variance check
+        </p>
       </div>
     </div>
   );

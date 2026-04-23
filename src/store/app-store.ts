@@ -8,6 +8,7 @@ import type {
   ProcessingStats,
   DetectionOptions,
   OutputSettings,
+  SensitivityPreset,
 } from '@/types';
 
 interface AppState {
@@ -27,6 +28,10 @@ interface AppState {
   sampleFrameData: ImageData | null;
   previewUrl: string | null;
 
+  // UI Settings
+  uiMode: 'simple' | 'advanced';
+  sensitivityPreset: SensitivityPreset;
+
   // Processing
   progress: ProcessingProgress | null;
   stats: ProcessingStats | null;
@@ -45,6 +50,8 @@ interface AppState {
   setHotPixelMap: (map: HotPixelMap | null) => void;
   setSampleFrameData: (data: ImageData | null) => void;
   setPreviewUrl: (url: string | null) => void;
+  setUiMode: (mode: 'simple' | 'advanced') => void;
+  setSensitivityPreset: (preset: SensitivityPreset) => void;
   setProgress: (progress: ProcessingProgress | null) => void;
   setStats: (stats: ProcessingStats | null) => void;
   setPaused: (paused: boolean) => void;
@@ -63,6 +70,7 @@ const initialState = {
   },
   detectionOptions: {
     // Optimized defaults for best F1 scores across different image types
+    // These match the 'normal' preset
     threshold: 240,
     contrastEnabled: true,
     contrastMinRatio: 1.3, // Lowered from 1.5 for better recall on subtle hot pixels
@@ -81,6 +89,8 @@ const initialState = {
   hotPixelMap: null,
   sampleFrameData: null,
   previewUrl: null,
+  uiMode: 'simple' as 'simple' | 'advanced', // Default to simple mode
+  sensitivityPreset: 'normal' as SensitivityPreset, // Default to normal preset
   progress: null,
   stats: null,
   isPaused: false,
@@ -112,6 +122,10 @@ export const useAppStore = create<AppState>((set) => ({
   setSampleFrameData: (data) => set({ sampleFrameData: data }),
 
   setPreviewUrl: (url) => set({ previewUrl: url }),
+
+  setUiMode: (mode) => set({ uiMode: mode }),
+
+  setSensitivityPreset: (preset) => set({ sensitivityPreset: preset }),
 
   setProgress: (progress) => set({ progress }),
 
