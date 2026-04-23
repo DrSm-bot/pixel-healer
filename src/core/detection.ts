@@ -9,6 +9,7 @@
  */
 
 import type { HotPixelMap, HotPixel, DetectionOptions } from '@/types';
+import { withDetectionDefaults } from './presets';
 
 const MIN_CONTRAST_NEIGHBOR_AVG = 8;
 
@@ -21,7 +22,9 @@ export function analyzeFrame(
   thresholdOrOptions: number | DetectionOptions
 ): Uint8Array {
   const options: DetectionOptions =
-    typeof thresholdOrOptions === 'number' ? { threshold: thresholdOrOptions } : thresholdOrOptions;
+    typeof thresholdOrOptions === 'number'
+      ? { threshold: thresholdOrOptions, adaptiveThreshold: false }
+      : thresholdOrOptions;
 
   const { data, width, height } = imageData;
   const pixelCount = width * height;
@@ -50,18 +53,30 @@ export function analyzeFrame(
  * Combine analysis results from multiple frames to identify hot pixels
  */
 function resolveThreshold(imageData: ImageData, options: DetectionOptions): number {
-  const baseThreshold = clampToByte(options.threshold ?? 240);
+  const normalizedOptions = withDetectionDefaults(options);
+  const baseThreshold = clampToByte(normalizedOptions.threshold ?? 240);
 
-  if (!options.adaptiveThreshold) {
+  if (!normalizedOptions.adaptiveThreshold) {
     return baseThreshold;
   }
 
-  const percentile = clamp01(options.adaptivePercentile ?? 0.999);
-  const adaptiveMin = clampToByte(options.adaptiveMinThreshold ?? 220);
-  const adaptiveMax = clampToByte(options.adaptiveMaxThreshold ?? 255);
+  const percentile = clamp01(normalizedOptions.adaptivePercentile ?? 0.999);
+  const [adaptiveMin, adaptiveMax] = normalizeAdaptiveBounds(
+    normalizedOptions.adaptiveMinThreshold,
+    normalizedOptions.adaptiveMaxThreshold
+  );
 
   const percentileThreshold = getBrightnessPercentileThreshold(imageData, percentile);
-  return clampToByte(Math.max(adaptiveMin, Math.min(adaptiveMax, percentileThreshold, 255)));
+  return clampToByte(Math.max(adaptiveMin, Math.min(adaptiveMax, percentileThreshold)));
+}
+
+function normalizeAdaptiveBounds(
+  adaptiveMinThreshold: number | undefined,
+  adaptiveMaxThreshold: number | undefined
+): [number, number] {
+  const clampedMin = clampToByte(adaptiveMinThreshold ?? 220);
+  const clampedMax = clampToByte(adaptiveMaxThreshold ?? 255);
+  return [Math.min(clampedMin, clampedMax), Math.max(clampedMin, clampedMax)];
 }
 
 function getBrightnessPercentileThreshold(imageData: ImageData, percentile: number): number {
@@ -145,7 +160,8 @@ export function detectHotPixels(
   options: DetectionOptions = {},
   frameBrightnessMaps?: Uint8Array[]
 ): HotPixelMap {
-  const { threshold = 240, minConsistency = 0.9 } = options;
+  const normalizedOptions = withDetectionDefaults(options);
+  const { threshold = 240, minConsistency = 0.9 } = normalizedOptions;
 
   const pixelCount = width * height;
   const frameCount = frameResults.length;
@@ -163,16 +179,16 @@ export function detectHotPixels(
   }
 
   const minHotFrames = Math.max(1, Math.floor(frameCount * minConsistency));
-  const minRunRatio = clamp01(options.temporalMinRunRatio ?? 0);
+  const minRunRatio = clamp01(normalizedOptions.temporalMinRunRatio ?? 0);
   const minHotRunFrames = Math.max(1, Math.ceil(frameCount * minRunRatio));
-  const spatialIsolationEnabled = options.spatialIsolationEnabled ?? false;
-  const spatialMaxHotNeighbors = Math.max(0, Math.floor(options.spatialMaxHotNeighbors ?? 8));
-  const varianceMaxThreshold = Math.max(0, options.varianceMaxThreshold ?? 100);
+  const spatialIsolationEnabled = normalizedOptions.spatialIsolationEnabled ?? false;
+  const spatialMaxHotNeighbors = Math.max(0, Math.floor(normalizedOptions.spatialMaxHotNeighbors ?? 8));
+  const varianceMaxThreshold = Math.max(0, normalizedOptions.varianceMaxThreshold ?? 100);
   const hasValidBrightnessMaps =
     Array.isArray(frameBrightnessMaps) &&
     frameBrightnessMaps.length === frameCount &&
     frameBrightnessMaps.every((frame) => frame.length === pixelCount);
-  const varianceFilterEnabled = (options.varianceFilterEnabled ?? true) && hasValidBrightnessMaps;
+  const varianceFilterEnabled = (normalizedOptions.varianceFilterEnabled ?? true) && hasValidBrightnessMaps;
 
   // Sum up hot counts across all frames and track temporal persistence
   const hotCounts = new Uint16Array(pixelCount);
