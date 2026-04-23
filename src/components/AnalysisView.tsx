@@ -11,6 +11,7 @@ import {
 import type { SensitivityPreset } from '@/types';
 import { resetAnalyzeState } from './analysis-state';
 import { AdvancedSettings } from './AnalysisView/AdvancedSettings';
+import { ManualEditPanel } from './AnalysisView/ManualEditPanel';
 
 export function AnalysisView() {
   // Use individual selectors for better re-render behavior
@@ -242,7 +243,7 @@ export function AnalysisView() {
                 <p className="text-3xl font-bold text-white">{inputFiles.length}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Hot Pixels Detected</p>
+                <p className="text-sm text-gray-400">Hot Pixels To Repair</p>
                 <p className="text-3xl font-bold text-cosmos-400">{hotPixelMap.pixels.size}</p>
               </div>
             </div>
@@ -254,6 +255,8 @@ export function AnalysisView() {
             </div>
           </div>
         )}
+
+        {isReviewStep && hotPixelMap && <ManualEditPanel />}
 
         <div className="flex gap-4">
           {isReviewStep ? (
@@ -305,7 +308,7 @@ export function AnalysisView() {
           )}
         </div>
 
-        {previewUrl && (
+        {previewUrl && !isReviewStep && (
           <div className="mt-8">
             <h3 className="font-semibold mb-2">Preview</h3>
             <img

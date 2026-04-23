@@ -1,5 +1,13 @@
 import { create } from 'zustand';
 import { DEFAULT_DETECTION_OPTIONS } from '@/core/presets';
+import {
+  INITIAL_MANUAL_EDIT_STATE,
+  addHotPixel as addHotPixelCore,
+  removeHotPixel as removeHotPixelCore,
+  toggleManualHotPixel as toggleManualHotPixelCore,
+  undoLastManualEdit as undoLastManualEditCore,
+  type ManualEditState,
+} from '@/core/manual-edit';
 import type {
   AppStep,
   AppError,
@@ -28,6 +36,9 @@ interface AppState {
   sampleFrameData: ImageData | null;
   previewUrl: string | null;
 
+  // Manual pixel edits (review step)
+  manualEditState: ManualEditState;
+
 
   // Processing
   progress: ProcessingProgress | null;
@@ -47,6 +58,11 @@ interface AppState {
   setHotPixelMap: (map: HotPixelMap | null) => void;
   setSampleFrameData: (data: ImageData | null) => void;
   setPreviewUrl: (url: string | null) => void;
+  addManualHotPixel: (x: number, y: number) => boolean;
+  removeManualHotPixel: (x: number, y: number) => boolean;
+  toggleManualHotPixel: (x: number, y: number) => 'add' | 'remove' | null;
+  undoManualEdit: () => boolean;
+  resetManualEdits: () => void;
   setProgress: (progress: ProcessingProgress | null) => void;
   setStats: (stats: ProcessingStats | null) => void;
   setPaused: (paused: boolean) => void;
@@ -67,6 +83,7 @@ const initialState = {
   hotPixelMap: null,
   sampleFrameData: null,
   previewUrl: null,
+  manualEditState: INITIAL_MANUAL_EDIT_STATE,
   progress: null,
   stats: null,
   isPaused: false,
@@ -93,7 +110,46 @@ export const useAppStore = create<AppState>((set) => ({
       detectionOptions: { ...state.detectionOptions, ...options },
     })),
 
-  setHotPixelMap: (map) => set({ hotPixelMap: map }),
+  setHotPixelMap: (map) =>
+    set({ hotPixelMap: map, manualEditState: INITIAL_MANUAL_EDIT_STATE }),
+
+  addManualHotPixel: (x, y) => {
+    const { hotPixelMap, manualEditState } = useAppStore.getState();
+    if (!hotPixelMap) return false;
+    const result = addHotPixelCore(hotPixelMap, manualEditState, x, y);
+    if (!result.changed) return false;
+    set({ hotPixelMap: result.map, manualEditState: result.state });
+    return true;
+  },
+
+  removeManualHotPixel: (x, y) => {
+    const { hotPixelMap, manualEditState } = useAppStore.getState();
+    if (!hotPixelMap) return false;
+    const result = removeHotPixelCore(hotPixelMap, manualEditState, x, y);
+    if (!result.changed) return false;
+    set({ hotPixelMap: result.map, manualEditState: result.state });
+    return true;
+  },
+
+  toggleManualHotPixel: (x, y) => {
+    const { hotPixelMap, manualEditState } = useAppStore.getState();
+    if (!hotPixelMap) return null;
+    const result = toggleManualHotPixelCore(hotPixelMap, manualEditState, x, y);
+    if (!result.changed) return null;
+    set({ hotPixelMap: result.map, manualEditState: result.state });
+    return result.kind;
+  },
+
+  undoManualEdit: () => {
+    const { hotPixelMap, manualEditState } = useAppStore.getState();
+    if (!hotPixelMap) return false;
+    const result = undoLastManualEditCore(hotPixelMap, manualEditState);
+    if (!result.changed) return false;
+    set({ hotPixelMap: result.map, manualEditState: result.state });
+    return true;
+  },
+
+  resetManualEdits: () => set({ manualEditState: INITIAL_MANUAL_EDIT_STATE }),
 
   setSampleFrameData: (data) => set({ sampleFrameData: data }),
 
