@@ -86,10 +86,10 @@ Provide a free, privacy-first web app that:
 
 ### 🚧 In Progress / Next (Phase 3b: Review UX)
 
-1. **Simple/Advanced UI Toggle:** ✅
-   - Simple Mode: Low/Normal/High sensitivity selector
-   - Advanced Mode: All parameters exposed for power users
-   - Collapsible advanced settings in Simple mode
+1. **Streamlined Sensitivity UI:** ✅
+   - Low/Normal/High sensitivity presets
+   - Expandable Advanced Settings section for parameter tuning
+   - No mode switching required
 
 2. **Manual Pixel Editing:** (Next PR)
    - Click to add/remove hot pixels
@@ -141,10 +141,10 @@ const PRESETS = {
 ```
 
 **UI Flow:**
-- Default mode: **Simple** with **Normal** preset selected
-- Users can toggle to **Advanced** mode for full parameter control
-- Simple mode includes collapsible "Advanced Settings" section
-- Manual parameter edits override preset values (no forced "Custom" preset state)
+- Default preset: **Normal** sensitivity
+- Presets shown as primary interface (Low/Normal/High)
+- Expandable "Advanced Settings" section for full parameter control
+- Manual parameter edits are detected and shown as "Custom" preset
 
 ## Technical Architecture
 
@@ -181,7 +181,7 @@ const PRESETS = {
 ### Detection Tuning (Steps 1-4b) ✅
 
 ### Phase 3b: Review UX 🚧
-- [x] Simple/Advanced UI toggle with sensitivity presets (PR #15)
+- [x] Sensitivity presets UI with expandable Advanced Settings (PR #15, #16)
 - [ ] Manual add/remove hot pixels (click to toggle)
 - [ ] Before/after comparison slider
 - [ ] Detection sensitivity tuning with live preview

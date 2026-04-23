@@ -17,7 +17,6 @@ export function AnalysisView() {
   const hotPixelMap = useAppStore((s) => s.hotPixelMap);
   const detectionOptions = useAppStore((s) => s.detectionOptions);
   const previewUrl = useAppStore((s) => s.previewUrl);
-  const uiMode = useAppStore((s) => s.uiMode);
   const setHotPixelMap = useAppStore((s) => s.setHotPixelMap);
   const setSampleFrameData = useAppStore((s) => s.setSampleFrameData);
   const setPreviewUrl = useAppStore((s) => s.setPreviewUrl);
@@ -25,8 +24,6 @@ export function AnalysisView() {
   const setError = useAppStore((s) => s.setError);
   const setProgress = useAppStore((s) => s.setProgress);
   const setDetectionOptions = useAppStore((s) => s.setDetectionOptions);
-  const setUiMode = useAppStore((s) => s.setUiMode);
-  const setSensitivityPreset = useAppStore((s) => s.setSensitivityPreset);
 
   const { loadImageData } = useFileSystem();
 
@@ -47,11 +44,10 @@ export function AnalysisView() {
 
   const handleSensitivityChange = useCallback(
     (preset: SensitivityPreset) => {
-      setSensitivityPreset(preset);
       const presetOptions = applySensitivityPreset(preset);
       setDetectionOptions(presetOptions);
     },
-    [setSensitivityPreset, setDetectionOptions]
+    [setDetectionOptions]
   );
 
   // Detect which preset (if any) matches current options
@@ -161,105 +157,61 @@ export function AnalysisView() {
         </p>
 
         {!isReviewStep && (
-          <>
-            {/* Simple/Advanced Mode Toggle */}
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => setUiMode('simple')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  uiMode === 'simple'
-                    ? 'bg-cosmos-600 text-white'
-                    : 'bg-cosmos-900/50 text-gray-400 hover:text-white'
-                }`}
-              >
-                Simple
-              </button>
-              <button
-                onClick={() => setUiMode('advanced')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  uiMode === 'advanced'
-                    ? 'bg-cosmos-600 text-white'
-                    : 'bg-cosmos-900/50 text-gray-400 hover:text-white'
-                }`}
-              >
-                Advanced
-              </button>
+          <div className="bg-cosmos-900/50 rounded-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">Detection Sensitivity</h3>
+              {!activePreset && (
+                <span className="text-xs px-2 py-1 bg-cosmos-700 text-cosmos-300 rounded">
+                  Custom
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-gray-400 mb-4">
+              Choose how aggressively to detect hot pixels. Start with Normal and adjust if needed.
+            </p>
+
+            <div className="grid grid-cols-1 gap-3">
+              {(['low', 'normal', 'high'] as const).map((preset) => {
+                const isActive = activePreset === preset;
+                return (
+                  <label
+                    key={preset}
+                    className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      isActive
+                        ? 'border-cosmos-500 bg-cosmos-800/30'
+                        : 'border-cosmos-700 hover:border-cosmos-600'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="sensitivity"
+                      value={preset}
+                      checked={isActive}
+                      onChange={() => handleSensitivityChange(preset)}
+                      className="mt-1"
+                      disabled={isAnalyzing}
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium capitalize">{preset}</div>
+                      <div className="text-sm text-gray-400">
+                        {SENSITIVITY_DESCRIPTIONS[preset]}
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
             </div>
 
-            {/* Simple Mode */}
-            {uiMode === 'simple' && (
-              <div className="bg-cosmos-900/50 rounded-lg p-6 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">Detection Sensitivity</h3>
-                  {!activePreset && (
-                    <span className="text-xs px-2 py-1 bg-cosmos-700 text-cosmos-300 rounded">
-                      Custom
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-400 mb-4">
-                  Choose how aggressively to detect hot pixels. Start with Normal and adjust if needed.
-                </p>
+            <button
+              onClick={() => setAdvancedExpanded(!advancedExpanded)}
+              className="mt-6 text-sm text-cosmos-400 hover:text-cosmos-300 flex items-center gap-2"
+            >
+              <span>{advancedExpanded ? '▼' : '▶'}</span>
+              <span>Advanced Settings</span>
+            </button>
 
-                <div className="grid grid-cols-1 gap-3">
-                  {(['low', 'normal', 'high'] as const).map((preset) => {
-                    const isActive = activePreset === preset;
-                    return (
-                      <label
-                        key={preset}
-                        className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                          isActive
-                            ? 'border-cosmos-500 bg-cosmos-800/30'
-                            : 'border-cosmos-700 hover:border-cosmos-600'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="sensitivity"
-                          value={preset}
-                          checked={isActive}
-                          onChange={() => handleSensitivityChange(preset)}
-                          className="mt-1"
-                          disabled={isAnalyzing}
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium capitalize">{preset}</div>
-                          <div className="text-sm text-gray-400">
-                            {SENSITIVITY_DESCRIPTIONS[preset]}
-                          </div>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-
-                <button
-                  onClick={() => setAdvancedExpanded(!advancedExpanded)}
-                  className="mt-6 text-sm text-cosmos-400 hover:text-cosmos-300 flex items-center gap-2"
-                >
-                  <span>{advancedExpanded ? '▼' : '▶'}</span>
-                  <span>Advanced Settings</span>
-                </button>
-
-                {advancedExpanded && (
-                  <div className="mt-4 pt-4 border-t border-cosmos-700">
-                    <AdvancedSettings
-                      detectionOptions={detectionOptions}
-                      setDetectionOptions={setDetectionOptions}
-                      isAnalyzing={isAnalyzing}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Advanced Mode */}
-            {uiMode === 'advanced' && (
-              <div className="bg-cosmos-900/50 rounded-lg p-6 mb-6">
-                <h3 className="font-semibold mb-4">Advanced Detection Settings</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                  Fine-tune all detection parameters. Changes here override preset values.
-                </p>
+            {advancedExpanded && (
+              <div className="mt-4 pt-4 border-t border-cosmos-700">
                 <AdvancedSettings
                   detectionOptions={detectionOptions}
                   setDetectionOptions={setDetectionOptions}
@@ -267,7 +219,7 @@ export function AnalysisView() {
                 />
               </div>
             )}
-          </>
+          </div>
         )}
 
         {isReviewStep && hotPixelMap && (
