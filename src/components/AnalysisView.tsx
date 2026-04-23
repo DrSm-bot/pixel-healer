@@ -6,6 +6,7 @@ import { imageDataToDataUrl, revokeDataUrl, createHotPixelOverlay } from '@/core
 import {
   SENSITIVITY_DESCRIPTIONS,
   applySensitivityPreset,
+  detectActivePreset,
 } from '@/core/presets';
 import type { SensitivityPreset, DetectionOptions } from '@/types';
 
@@ -17,7 +18,6 @@ export function AnalysisView() {
   const detectionOptions = useAppStore((s) => s.detectionOptions);
   const previewUrl = useAppStore((s) => s.previewUrl);
   const uiMode = useAppStore((s) => s.uiMode);
-  const sensitivityPreset = useAppStore((s) => s.sensitivityPreset);
   const setHotPixelMap = useAppStore((s) => s.setHotPixelMap);
   const setSampleFrameData = useAppStore((s) => s.setSampleFrameData);
   const setPreviewUrl = useAppStore((s) => s.setPreviewUrl);
@@ -53,6 +53,9 @@ export function AnalysisView() {
     },
     [setSensitivityPreset, setDetectionOptions]
   );
+
+  // Detect which preset (if any) matches current options
+  const activePreset = detectActivePreset(detectionOptions);
 
   const handleAnalyze = useCallback(async () => {
     setIsAnalyzing(true);
@@ -186,38 +189,48 @@ export function AnalysisView() {
             {/* Simple Mode */}
             {uiMode === 'simple' && (
               <div className="bg-cosmos-900/50 rounded-lg p-6 mb-6">
-                <h3 className="font-semibold mb-4">Detection Sensitivity</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold">Detection Sensitivity</h3>
+                  {!activePreset && (
+                    <span className="text-xs px-2 py-1 bg-cosmos-700 text-cosmos-300 rounded">
+                      Custom
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-400 mb-4">
                   Choose how aggressively to detect hot pixels. Start with Normal and adjust if needed.
                 </p>
 
                 <div className="grid grid-cols-1 gap-3">
-                  {(['low', 'normal', 'high'] as const).map((preset) => (
-                    <label
-                      key={preset}
-                      className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                        sensitivityPreset === preset
-                          ? 'border-cosmos-500 bg-cosmos-800/30'
-                          : 'border-cosmos-700 hover:border-cosmos-600'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="sensitivity"
-                        value={preset}
-                        checked={sensitivityPreset === preset}
-                        onChange={() => handleSensitivityChange(preset)}
-                        className="mt-1"
-                        disabled={isAnalyzing}
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium capitalize">{preset}</div>
-                        <div className="text-sm text-gray-400">
-                          {SENSITIVITY_DESCRIPTIONS[preset]}
+                  {(['low', 'normal', 'high'] as const).map((preset) => {
+                    const isActive = activePreset === preset;
+                    return (
+                      <label
+                        key={preset}
+                        className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                          isActive
+                            ? 'border-cosmos-500 bg-cosmos-800/30'
+                            : 'border-cosmos-700 hover:border-cosmos-600'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="sensitivity"
+                          value={preset}
+                          checked={isActive}
+                          onChange={() => handleSensitivityChange(preset)}
+                          className="mt-1"
+                          disabled={isAnalyzing}
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium capitalize">{preset}</div>
+                          <div className="text-sm text-gray-400">
+                            {SENSITIVITY_DESCRIPTIONS[preset]}
+                          </div>
                         </div>
-                      </div>
-                    </label>
-                  ))}
+                      </label>
+                    );
+                  })}
                 </div>
 
                 <button
