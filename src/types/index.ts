@@ -65,6 +65,11 @@ export interface HotPixelMap {
 }
 
 /**
+ * Sensitivity preset levels
+ */
+export type SensitivityPreset = 'low' | 'normal' | 'high';
+
+/**
  * Options for hot pixel detection
  */
 export interface DetectionOptions {

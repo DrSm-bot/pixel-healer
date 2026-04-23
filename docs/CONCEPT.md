@@ -86,16 +86,17 @@ Provide a free, privacy-first web app that:
 
 ### 🚧 In Progress / Next (Phase 3b: Review UX)
 
-1. **Simple/Advanced UI Toggle:**
+1. **Simple/Advanced UI Toggle:** ✅
    - Simple Mode: Low/Normal/High sensitivity selector
    - Advanced Mode: All parameters exposed for power users
+   - Collapsible advanced settings in Simple mode
 
-2. **Manual Pixel Editing:**
+2. **Manual Pixel Editing:** (Next PR)
    - Click to add/remove hot pixels
    - Before/after comparison view
    - Hot pixel coordinate list
 
-3. **Live Preview:**
+3. **Live Preview:** (Next PR)
    - Real-time detection preview on parameter change
 
 ## Detection Parameters
@@ -114,15 +115,36 @@ Provide a free, privacy-first web app that:
 | `spatialIsolationEnabled` | **true** | Filter clustered candidates |
 | `varianceFilterEnabled` | **true** | Low variance = hot pixel |
 
-### Planned: Sensitivity Presets
+### Sensitivity Presets (Implemented)
 
 ```typescript
 const PRESETS = {
-  low:    { contrastMinRatio: 2.0, minConsistency: 0.95 },  // Fewer detections
-  normal: { contrastMinRatio: 1.3, minConsistency: 0.9 },   // Balanced (default)
-  high:   { contrastMinRatio: 1.1, minConsistency: 0.8 }    // More detections
+  low: {
+    contrastMinRatio: 2.0,           // More conservative
+    minConsistency: 0.95,            // Must appear in 95% of frames
+    temporalMinRunRatio: 0.9,        // Longer consecutive run
+    varianceMaxThreshold: 80,        // Lower variance tolerance
+  },
+  normal: {
+    contrastMinRatio: 1.3,           // Balanced (default)
+    minConsistency: 0.9,             // Must appear in 90% of frames
+    temporalMinRunRatio: 0.875,
+    varianceMaxThreshold: 100,
+  },
+  high: {
+    contrastMinRatio: 1.1,           // More sensitive
+    minConsistency: 0.8,             // Must appear in 80% of frames
+    temporalMinRunRatio: 0.75,       // Shorter run required
+    varianceMaxThreshold: 120,       // Higher variance tolerance
+  },
 };
 ```
+
+**UI Flow:**
+- Default mode: **Simple** with **Normal** preset selected
+- Users can toggle to **Advanced** mode for full parameter control
+- Simple mode includes collapsible "Advanced Settings" section
+- Manual parameter edits override preset values (no forced "Custom" preset state)
 
 ## Technical Architecture
 
@@ -159,7 +181,7 @@ const PRESETS = {
 ### Detection Tuning (Steps 1-4b) ✅
 
 ### Phase 3b: Review UX 🚧
-- [ ] Simple/Advanced UI toggle with sensitivity presets
+- [x] Simple/Advanced UI toggle with sensitivity presets (PR #15)
 - [ ] Manual add/remove hot pixels (click to toggle)
 - [ ] Before/after comparison slider
 - [ ] Detection sensitivity tuning with live preview

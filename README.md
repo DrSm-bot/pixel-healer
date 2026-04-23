@@ -15,9 +15,10 @@ Remove those annoying stuck pixels from your astrophotography sequences — enti
 ## How It Works
 
 1. **Select your image folder** — Pick a directory containing your time-lapse frames
-2. **Analyze** — The tool samples the first N frames to find pixels that are consistently bright (hot pixels stay put, stars move!)
-3. **Preview** — See detected hot pixels highlighted before committing
-4. **Fix & Export** — Apply the fix to all frames and save to a new folder
+2. **Choose sensitivity** — Pick Low/Normal/High detection sensitivity (or use Advanced mode for fine control)
+3. **Analyze** — The tool samples frames to find pixels that are consistently bright (hot pixels stay put, stars move!)
+4. **Preview** — See detected hot pixels highlighted before committing
+5. **Fix & Export** — Apply the fix to all frames and save to a new folder
 
 ## Quick Start
 
@@ -44,11 +45,21 @@ pnpm dev
 
 Hot pixels are sensor defects that appear as bright dots in the same position across all frames. Unlike stars (which move due to Earth's rotation), hot pixels stay stationary.
 
-The algorithm:
+### Detection Algorithm
 1. Samples multiple frames from your sequence
 2. For each pixel position, checks if it's consistently above a brightness threshold
-3. Pixels that are "stuck bright" across all sampled frames = hot pixels
-4. Repairs by interpolating from neighboring pixels
+3. Applies contrast detection (compares pixel to its neighbors)
+4. Filters for temporal consistency (must be hot across most frames)
+5. Pixels that pass all checks = hot pixels
+6. Repairs by interpolating from neighboring pixels
+
+### Sensitivity Presets
+
+- **Low**: Conservative detection, fewest false positives (good for clean sensors)
+- **Normal**: Balanced detection, recommended for most scenarios
+- **High**: Aggressive detection, catches subtle hot pixels (may include some false positives)
+
+Advanced users can toggle to **Advanced Mode** to fine-tune all detection parameters manually.
 
 ## Privacy
 
