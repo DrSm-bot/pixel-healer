@@ -1,28 +1,57 @@
-# ✨ Pixel Healer
+# Pixel Healer
 
 **Browser-based hot pixel remover for night sky time-lapse photography.**
 
-Remove those annoying stuck pixels from your astrophotography sequences — entirely in your browser, with zero uploads. Your images never leave your computer.
+Remove stuck/hot pixels from your astrophotography sequences entirely in your browser. No uploads, no servers — your images never leave your computer.
+
+## Why Pixel Healer?
+
+Hot pixels are sensor defects that appear as bright dots in the same position across all frames. Unlike stars (which move due to Earth's rotation), hot pixels stay stationary — making them easy to detect by comparing frames, but tedious to fix manually across hundreds of images.
+
+Pixel Healer automates this: it analyzes your sequence, finds the stuck pixels, and repairs them across all frames in batch.
 
 ## Features
 
-- 🌙 **Made for Night Sky** — Optimized for time-lapse sequences where stars move but hot pixels don't
-- 🔒 **100% Local** — All processing happens in your browser. No uploads, no servers, no tracking
-- ⚡ **Fast** — Web Workers for parallel processing, streams images without loading everything into RAM
-- 🎯 **Smart Detection** — Automatically identifies stuck pixels by analyzing multiple frames
-- 📁 **Batch Processing** — Process hundreds or thousands of frames at once
+- **Made for Night Sky** — Optimized for time-lapse sequences where stars move but hot pixels don't
+- **100% Local** — All processing happens in your browser. No uploads, no servers, no tracking
+- **Smart Detection** — Automatically identifies stuck pixels using adaptive thresholds and temporal analysis
+- **Before/After Comparison** — Slider, toggle, or side-by-side view to verify repairs
+- **Manual Editing** — Click to add missed pixels or remove false positives, with full undo support
+- **Batch Processing** — Process hundreds or thousands of frames at once
+- **Safe by Default** — Writes to a separate output folder; overwriting originals requires explicit opt-in
 
 ## How It Works
 
-1. **Select your image folder** — Pick a directory containing your time-lapse frames
-2. **Choose sensitivity** — Pick Low/Normal/High detection sensitivity presets
-3. **Analyze** — The tool samples frames to find pixels that are consistently bright (hot pixels stay put, stars move!)
-4. **Preview** — See detected hot pixels highlighted before committing
-5. **Fix & Export** — Apply the fix to all frames and save to a new folder
+### 1. Analyze
+
+Select your image folder and choose a sensitivity preset (Low / Normal / High). The tool samples frames across your sequence and identifies pixels that are consistently bright in the same position — hot pixels stay put while stars move.
+
+Expand **Advanced Settings** if you need fine-grained control over detection parameters.
+
+### 2. Review
+
+See detected hot pixels highlighted on a sample frame. Use the comparison tools to verify:
+
+- **Slider**: Drag to reveal the repaired image underneath
+- **Toggle**: Click to flip between before/after
+- **Side-by-side**: View both images at once
+
+If the detection missed a pixel or flagged a false positive, enable **Edit Mode** to click and add/remove pixels manually. Use **Undo** to reverse mistakes or **Clear edit history** to start fresh.
+
+### 3. Process
+
+Choose an output folder and process all frames. The tool repairs each image and saves it to your chosen location.
+
+**Output folder safety:**
+- By default, you must select a *different* folder than your input to prevent accidental overwrites
+- If you select the same folder, you'll see a warning and must explicitly check "Allow overwriting input files"
+- Always keep backups of your original files before processing
+
+Processing can be paused, resumed, or cancelled at any time.
 
 ## Quick Start
 
-Visit **[pixel-healer.pages.dev](https://pixel-healer.pages.dev)**
+**Try it now:** [pixel-healer.pages.dev](https://pixel-healer.pages.dev)
 
 Or run locally:
 
@@ -37,95 +66,113 @@ pnpm dev
 
 | Format | Status |
 |--------|--------|
-| JPEG/JPG | ✅ Supported |
-| PNG | ✅ Supported |
-| RAW (CR2, NEF, ARW, etc.) | 🗓️ Planned |
+| JPEG/JPG | Supported |
+| PNG | Supported |
+| WebP | Supported |
+| RAW (CR2, NEF, ARW, etc.) | Planned |
 
-## How Detection Works
+## Detection Algorithm
 
-Hot pixels are sensor defects that appear as bright dots in the same position across all frames. Unlike stars (which move due to Earth's rotation), hot pixels stay stationary.
+1. **Sampling** — Selects frames distributed across your sequence
+2. **Adaptive thresholding** — Per-frame brightness threshold based on percentile
+3. **Contrast check** — Compares each pixel to its 8 neighbors
+4. **Temporal consistency** — Must be hot across most sampled frames
+5. **Variance filter** — Stable brightness = hot pixel (stars flicker)
+6. **Spatial isolation** — Hot pixels are isolated, not clustered
 
-### Detection Algorithm
-1. Samples multiple frames from your sequence
-2. For each pixel position, checks if it's consistently above a brightness threshold
-3. Applies contrast detection (compares pixel to its neighbors)
-4. Filters for temporal consistency (must be hot across most frames)
-5. Pixels that pass all checks = hot pixels
-6. Repairs by interpolating from neighboring pixels
+**Repair:** Hot pixels are replaced with the average of their 8 neighbors.
 
 ### Sensitivity Presets
 
-- **Low**: Conservative detection, fewest false positives (good for clean sensors)
-- **Normal**: Balanced detection, recommended for most scenarios
-- **High**: Aggressive detection, catches subtle hot pixels (may include some false positives)
+| Preset | Use Case |
+|--------|----------|
+| **Low** | Conservative — fewest false positives, good for clean sensors |
+| **Normal** | Balanced — recommended for most scenarios |
+| **High** | Aggressive — catches subtle hot pixels, may include some false positives |
 
-Advanced users can expand the **Advanced Settings** section to fine-tune all detection parameters manually.
+Expand **Advanced Settings** to fine-tune detection parameters manually.
 
 ## Privacy
 
-**Your images never leave your device.** 
+**Your images never leave your device.**
 
-This tool uses the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_Access_API) to read and write files directly on your computer. There are no servers, no uploads, no analytics, no tracking.
-
-The entire application runs in your browser as static files.
+This tool uses the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_Access_API) to read and write files directly on your computer. No servers, no uploads, no analytics, no tracking. The entire application runs in your browser as static files.
 
 ## Browser Support
 
 Requires a modern browser with File System Access API support:
 
-- ✅ Chrome 86+
-- ✅ Edge 86+
-- ✅ Opera 72+
-- ⚠️ Firefox (limited — can read but not write back to disk)
-- ⚠️ Safari (limited)
+| Browser | Status |
+|---------|--------|
+| Chrome 86+ | Full support |
+| Edge 86+ | Full support |
+| Opera 72+ | Full support |
+| Firefox | Limited — can read but not write back to disk |
+| Safari | Limited — partial File System Access support |
+
+## Troubleshooting
+
+**"Permission denied" or file access errors:**
+- Grant file system permissions when prompted
+- Some browsers require re-granting permissions per session
+
+**Processing seems slow:**
+- Large images (6000+ pixels wide) take longer
+- Processing happens in sequence to manage memory
+
+**Detection missed obvious hot pixels:**
+- Try the "High" sensitivity preset
+- Use manual editing to add missed pixels
+
+**Too many false positives:**
+- Try the "Low" sensitivity preset
+- Use manual editing to remove false detections
+
+**Browser not supported:**
+- Use Chrome, Edge, or Opera for full functionality
+- Firefox users: you can analyze but cannot save to disk directly
+
+## Known Limitations
+
+- **RAW files not yet supported** — Convert to JPEG/PNG first
+- **Very large sequences (1000+ frames)** — May be slow; consider processing in batches
+- **Mobile browsers** — Not supported due to File System Access API requirements
 
 ## Tech Stack
 
 - TypeScript + Vite + React
 - Web Workers for background processing
-- File System Access API for streaming
+- File System Access API for file I/O
 - Deployed on Cloudflare Pages
-
-## Dev: Synthetic Benchmark Harness
-
-Pixel Healer includes a dev-only synthetic corruption + evaluation harness for reproducible detection/healing experiments.
-
-- Spec: [`docs/SYNTHETIC_HOT_PIXEL_GENERATOR_SPEC.md`](docs/SYNTHETIC_HOT_PIXEL_GENERATOR_SPEC.md)
-- Scope: deterministic hot-pixel injection, mask fixtures, evaluation metrics (precision/recall/F1, PSNR/SSIM), hidden dev panel, CI regression gate
-- Open the panel during `pnpm dev` with `?dev=1` or `Ctrl+Shift+D`
-- Use it after running analysis so a clean frame is in memory; choose a profile/seed, generate a corrupted sequence, then run evaluation
-- CI/test flow includes a fixed typical-profile baseline gate and fails if F1 drops below the documented floor (`0.45`)
-- Shipping policy: dev-only (`src/dev/**`), dynamically imported behind `import.meta.env.DEV`
-
-### Local Full-Resolution Harness Tests
-
-For realistic, non-downscaled evaluation on private stacks:
-
-1. Put full-res frames under `~/stacks/stack1` and `~/stacks/stack2` (or another custom root)
-2. Link them into local fixtures:
-   - `./scripts/setup-local-fixtures.sh`
-3. Run local evaluation:
-   - `pnpm test:local`
-
-The local test reads `tests/fixtures/local/*` (gitignored), injects synthetic hot pixels on top of those real frames, and reports precision/recall/F1, PSNR/SSIM, and runtime for all four profiles.
-
-If your machine reports a `canvas` module error, install/build canvas native dependencies first.
-
-### Detection Tuning Status (Current)
-
-Recent detection tuning focused on reducing false positives on real full-resolution stacks:
-
-- ✅ **Step 1:** Adaptive per-frame thresholding (percentile + clamps)
-- ✅ **Step 2:** Temporal persistence filter (`temporalMinRunRatio`)
-- ✅ **Step 3:** Spatial isolation filter (`spatialIsolationEnabled`, `spatialMaxHotNeighbors`)
-- 🚧 **Step 4a (next):** Contrast-based neighborhood feature (local context signal)
-- 🚧 **Step 4b (next):** Temporal variance feature (separate stable hot pixels from moving stars)
-
-Current snapshot: `easy` profile improved strongly, while `typical` remains below target and needs the planned 4a/4b feature pass.
 
 ## Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Development
+
+<details>
+<summary>Synthetic benchmark harness (for contributors)</summary>
+
+Pixel Healer includes a dev-only synthetic corruption + evaluation harness for reproducible detection/healing experiments.
+
+- Spec: [`docs/SYNTHETIC_HOT_PIXEL_GENERATOR_SPEC.md`](docs/SYNTHETIC_HOT_PIXEL_GENERATOR_SPEC.md)
+- Open the dev panel during `pnpm dev` with `?dev=1` or `Ctrl+Shift+D`
+- CI regression gate fails if F1 drops below `0.45`
+
+**Local full-resolution tests:**
+
+```bash
+# Link your stacks into fixtures
+./scripts/setup-local-fixtures.sh
+
+# Run evaluation
+pnpm test:local
+```
+
+See [`tests/fixtures/README.md`](tests/fixtures/README.md) for details.
+
+</details>
 
 ## License
 
@@ -133,4 +180,4 @@ MIT — see [LICENSE](LICENSE)
 
 ---
 
-*Made with 🦞 by the AxonArcade crew*
+*Made with care by the AxonArcade crew*
