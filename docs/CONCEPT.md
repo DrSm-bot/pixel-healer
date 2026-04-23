@@ -182,7 +182,7 @@ const PRESETS = {
 
 ### Phase 3b: Review UX 🚧
 - [x] Sensitivity presets UI with expandable Advanced Settings (PR #15, #16)
-- [ ] Manual add/remove hot pixels (click to toggle)
+- [x] Manual add/remove hot pixels (click to toggle) — PR #25
 - [ ] Before/after comparison slider
 - [ ] Detection sensitivity tuning with live preview
 - [ ] Hot pixel list with coordinates
