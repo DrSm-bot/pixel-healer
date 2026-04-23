@@ -9,6 +9,7 @@ import {
   detectActivePreset,
 } from '@/core/presets';
 import type { SensitivityPreset, DetectionOptions } from '@/types';
+import { resetAnalyzeState } from './analysis-state';
 
 export function AnalysisView() {
   // Use individual selectors for better re-render behavior
@@ -54,6 +55,14 @@ export function AnalysisView() {
   const activePreset = detectActivePreset(detectionOptions);
 
   const handleAnalyze = useCallback(async () => {
+    resetAnalyzeState({
+      previewUrl,
+      revokePreviewUrl: revokeDataUrl,
+      setPreviewUrl,
+      setHotPixelMap,
+      setSampleFrameData,
+    });
+
     setIsAnalyzing(true);
     setProgress({
       step: 'Analyzing frames...',
@@ -136,6 +145,7 @@ export function AnalysisView() {
     inputFiles,
     detectionOptions,
     loadImageData,
+    previewUrl,
     setHotPixelMap,
     setSampleFrameData,
     setPreviewUrl,
