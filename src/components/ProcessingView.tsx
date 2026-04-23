@@ -21,7 +21,7 @@ export function ProcessingView() {
     setOutputSettings,
   } = useAppStore();
 
-  const { loadImageData, saveImageData, saveImageToDirectory, selectOutputDirectory } =
+  const { loadImageData, saveImageData, saveImageToDirectory, saveImageToDirectorySafe, selectOutputDirectory } =
     useFileSystem();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -186,9 +186,15 @@ export function ProcessingView() {
           const { format, outputFileName } = getOutputFormat(file.name);
 
           // Save to output directory
-          if (outputSettings.allowOverwrite && sameDirNow) {
-            // Overwrite mode: save to original file handle
-            await saveImageData(imageData, file.handle, format);
+          if (outputSettings.allowOverwrite && sameDirNow && inputDir) {
+            // Overwrite mode: use safe method that re-acquires handle from directory
+            // This prevents stale handle errors when file state changes between read and write
+            await saveImageToDirectorySafe(
+              imageData,
+              inputDir,
+              outputFileName,
+              format
+            );
           } else if (outputSettings.outputDir) {
             // Safe mode: save to output directory with same filename/format
             await saveImageToDirectory(
@@ -209,7 +215,19 @@ export function ProcessingView() {
           processedCount++;
         } catch (err) {
           // Log error but continue processing other files
-          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          let errorMessage = err instanceof Error ? err.message : 'Unknown error';
+
+          // Provide user-friendly error messages for common issues
+          if (err instanceof DOMException && err.name === 'InvalidStateError') {
+            errorMessage =
+              'File state error - the file may have been modified externally. ' +
+              'Please try processing again or ensure no other programs are accessing the files.';
+          } else if (err instanceof DOMException && err.name === 'NotAllowedError') {
+            errorMessage = 'Permission denied - please grant file access permission.';
+          } else if (err instanceof DOMException && err.name === 'NotFoundError') {
+            errorMessage = 'File not found - the file may have been moved or deleted.';
+          }
+
           console.error(`Failed to process ${file.name}:`, errorMessage);
 
           fileResults.push({
@@ -253,6 +271,7 @@ export function ProcessingView() {
     loadImageData,
     saveImageData,
     saveImageToDirectory,
+    saveImageToDirectorySafe,
     getOutputFormat,
     setProgress,
     setStats,
