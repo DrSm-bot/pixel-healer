@@ -6,10 +6,14 @@ import {
 } from './processing-utils';
 
 describe('ProcessingView robustness helpers', () => {
-  it('disables overwrite when output is no longer same as input', () => {
-    expect(shouldDisableOverwrite(false, true)).toBe(true);
-    expect(shouldDisableOverwrite(true, true)).toBe(false);
-    expect(shouldDisableOverwrite(false, false)).toBe(false);
+  it('disables overwrite when output is no longer same as input after verification', () => {
+    expect(shouldDisableOverwrite(false, true, true)).toBe(true);
+    expect(shouldDisableOverwrite(true, true, true)).toBe(false);
+    expect(shouldDisableOverwrite(false, false, true)).toBe(false);
+  });
+
+  it('does not disable overwrite before directory comparison has completed', () => {
+    expect(shouldDisableOverwrite(false, true, false)).toBe(false);
   });
 
   it('treats missing directories as not-same', async () => {

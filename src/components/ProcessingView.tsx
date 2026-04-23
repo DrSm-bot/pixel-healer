@@ -33,6 +33,7 @@ export function ProcessingView() {
   const [isVerifyingOutputDir, setIsVerifyingOutputDir] = useState(false);
   const [showOutputPicker, setShowOutputPicker] = useState(false);
   const [isOutputSameAsInput, setIsOutputSameAsInput] = useState(false);
+  const [hasVerifiedDirectoryComparison, setHasVerifiedDirectoryComparison] = useState(false);
   const isMountedRef = useRef(true);
   const processingAbortRef = useRef<AbortController | null>(null);
 
@@ -53,16 +54,19 @@ export function ProcessingView() {
   // Compare directory handles by entry (not object identity)
   useEffect(() => {
     const controller = new AbortController();
+    setHasVerifiedDirectoryComparison(false);
 
     const checkIfSameDirectory = async () => {
       try {
         const same = await checkSameDirectory(outputSettings.outputDir, inputDir, controller.signal);
         if (same !== null && isMountedRef.current) {
           setIsOutputSameAsInput(same);
+          setHasVerifiedDirectoryComparison(true);
         }
       } catch {
         if (!controller.signal.aborted && isMountedRef.current) {
           setIsOutputSameAsInput(false);
+          setHasVerifiedDirectoryComparison(true);
         }
       }
     };
@@ -75,10 +79,21 @@ export function ProcessingView() {
   }, [inputDir, outputSettings.outputDir]);
 
   useEffect(() => {
-    if (shouldDisableOverwrite(isOutputSameAsInput, outputSettings.allowOverwrite)) {
+    if (
+      shouldDisableOverwrite(
+        isOutputSameAsInput,
+        outputSettings.allowOverwrite,
+        hasVerifiedDirectoryComparison
+      )
+    ) {
       setOutputSettings({ allowOverwrite: false });
     }
-  }, [isOutputSameAsInput, outputSettings.allowOverwrite, setOutputSettings]);
+  }, [
+    isOutputSameAsInput,
+    outputSettings.allowOverwrite,
+    hasVerifiedDirectoryComparison,
+    setOutputSettings,
+  ]);
 
   const handleSelectOutputDir = useCallback(async () => {
     const dir = await selectOutputDirectory();

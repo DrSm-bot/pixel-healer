@@ -1,5 +1,9 @@
-export function shouldDisableOverwrite(isOutputSameAsInput: boolean, allowOverwrite: boolean): boolean {
-  return !isOutputSameAsInput && allowOverwrite;
+export function shouldDisableOverwrite(
+  isOutputSameAsInput: boolean,
+  allowOverwrite: boolean,
+  hasVerifiedDirectoryComparison = true
+): boolean {
+  return hasVerifiedDirectoryComparison && !isOutputSameAsInput && allowOverwrite;
 }
 
 export async function checkSameDirectory(
