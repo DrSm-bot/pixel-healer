@@ -1,8 +1,13 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { useFileSystem } from '@/hooks/useFileSystem';
 import { repairAllPixels } from '@/core/repair';
 import type { FileProcessingResult } from '@/types';
+import {
+  checkSameDirectory,
+  shouldDisableOverwrite,
+  waitForResumeOrCancel,
+} from '@/components/processing-utils';
 
 export function ProcessingView() {
   const {
@@ -21,12 +26,15 @@ export function ProcessingView() {
     setOutputSettings,
   } = useAppStore();
 
-  const { loadImageData, saveImageData, saveImageToDirectory, saveImageToDirectorySafe, selectOutputDirectory } =
+  const { loadImageData, saveImageToDirectory, saveImageToDirectorySafe, selectOutputDirectory } =
     useFileSystem();
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isVerifyingOutputDir, setIsVerifyingOutputDir] = useState(false);
   const [showOutputPicker, setShowOutputPicker] = useState(false);
   const [isOutputSameAsInput, setIsOutputSameAsInput] = useState(false);
+  const isMountedRef = useRef(true);
+  const processingAbortRef = useRef<AbortController | null>(null);
 
   // Auto-show output picker on mount if not set
   useEffect(() => {
@@ -35,26 +43,25 @@ export function ProcessingView() {
     }
   }, [outputSettings.outputDir, showOutputPicker]);
 
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      processingAbortRef.current?.abort();
+    };
+  }, []);
+
   // Compare directory handles by entry (not object identity)
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     const checkIfSameDirectory = async () => {
-      if (!outputSettings.outputDir || !inputDir) {
-        setIsOutputSameAsInput(false);
-        return;
-      }
-
       try {
-        const same = await outputSettings.outputDir.isSameEntry(inputDir);
-        if (!cancelled) {
+        const same = await checkSameDirectory(outputSettings.outputDir, inputDir, controller.signal);
+        if (same !== null && isMountedRef.current) {
           setIsOutputSameAsInput(same);
-          if (!same && outputSettings.allowOverwrite) {
-            setOutputSettings({ allowOverwrite: false });
-          }
         }
       } catch {
-        if (!cancelled) {
+        if (!controller.signal.aborted && isMountedRef.current) {
           setIsOutputSameAsInput(false);
         }
       }
@@ -63,9 +70,15 @@ export function ProcessingView() {
     void checkIfSameDirectory();
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
-  }, [inputDir, outputSettings.outputDir, outputSettings.allowOverwrite, setOutputSettings]);
+  }, [inputDir, outputSettings.outputDir]);
+
+  useEffect(() => {
+    if (shouldDisableOverwrite(isOutputSameAsInput, outputSettings.allowOverwrite)) {
+      setOutputSettings({ allowOverwrite: false });
+    }
+  }, [isOutputSameAsInput, outputSettings.allowOverwrite, setOutputSettings]);
 
   const handleSelectOutputDir = useCallback(async () => {
     const dir = await selectOutputDirectory();
@@ -78,6 +91,11 @@ export function ProcessingView() {
   const handleToggleOverwrite = useCallback(() => {
     setOutputSettings({ allowOverwrite: !outputSettings.allowOverwrite });
   }, [outputSettings.allowOverwrite, setOutputSettings]);
+
+  const handleCancelProcessing = useCallback(() => {
+    processingAbortRef.current?.abort();
+    setCancelled(true);
+  }, [setCancelled]);
 
   const getOutputFormat = useCallback(
     (fileName: string): { format: 'image/jpeg' | 'image/png'; outputFileName: string } => {
@@ -99,6 +117,10 @@ export function ProcessingView() {
   );
 
   const handleProcess = useCallback(async () => {
+    if (isProcessing || isVerifyingOutputDir) {
+      return;
+    }
+
     if (!hotPixelMap || !inputDir) {
       setError({
         message: 'No hot pixel data',
@@ -117,16 +139,35 @@ export function ProcessingView() {
       return;
     }
 
+    processingAbortRef.current?.abort();
+    const controller = new AbortController();
+    processingAbortRef.current = controller;
+
+    setIsVerifyingOutputDir(true);
     let sameDirNow = false;
     try {
-      sameDirNow = await outputSettings.outputDir.isSameEntry(inputDir);
-      setIsOutputSameAsInput(sameDirNow);
+      const same = await checkSameDirectory(outputSettings.outputDir, inputDir, controller.signal);
+      if (same === null) {
+        return;
+      }
+      sameDirNow = same;
+      if (isMountedRef.current) {
+        setIsOutputSameAsInput(sameDirNow);
+      }
     } catch {
       setError({
         message: 'Failed to verify output directory',
         details: 'Could not verify whether output directory matches input directory.',
         recoverable: true,
       });
+      return;
+    } finally {
+      if (isMountedRef.current) {
+        setIsVerifyingOutputDir(false);
+      }
+    }
+
+    if (controller.signal.aborted) {
       return;
     }
 
@@ -140,7 +181,9 @@ export function ProcessingView() {
       return;
     }
 
-    setIsProcessing(true);
+    if (isMountedRef.current) {
+      setIsProcessing(true);
+    }
     setCancelled(false);
     setPaused(false);
 
@@ -152,14 +195,18 @@ export function ProcessingView() {
     try {
       for (let i = 0; i < inputFiles.length; i++) {
         // Check for cancellation
-        if (useAppStore.getState().isCancelled) {
+        if (controller.signal.aborted || useAppStore.getState().isCancelled) {
           break;
         }
 
         // Wait while paused
-        while (useAppStore.getState().isPaused) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          if (useAppStore.getState().isCancelled) break;
+        const pauseState = await waitForResumeOrCancel({
+          getIsPaused: () => useAppStore.getState().isPaused,
+          getIsCancelled: () => useAppStore.getState().isCancelled,
+          signal: controller.signal,
+        });
+        if (pauseState === 'cancelled') {
+          break;
         }
 
         const file = inputFiles[i]!;
@@ -179,6 +226,9 @@ export function ProcessingView() {
         try {
           // Load image
           const imageData = await loadImageData(file);
+          if (controller.signal.aborted || useAppStore.getState().isCancelled) {
+            break;
+          }
 
           // Repair pixels
           repairAllPixels(imageData, hotPixelArray);
@@ -205,6 +255,10 @@ export function ProcessingView() {
             );
           } else {
             throw new Error('No output directory selected');
+          }
+
+          if (controller.signal.aborted || useAppStore.getState().isCancelled) {
+            break;
           }
 
           fileResults.push({
@@ -242,6 +296,11 @@ export function ProcessingView() {
       const totalTime = endTime - startTime;
       const failedCount = fileResults.filter((r) => !r.success).length;
 
+      if (controller.signal.aborted || useAppStore.getState().isCancelled) {
+        setProgress(null);
+        return;
+      }
+
       setStats({
         framesProcessed: processedCount,
         hotPixelsFixed: hotPixelArray.length,
@@ -261,15 +320,19 @@ export function ProcessingView() {
         recoverable: true,
       });
     } finally {
-      setIsProcessing(false);
+      processingAbortRef.current = null;
+      if (isMountedRef.current) {
+        setIsProcessing(false);
+      }
     }
   }, [
     inputFiles,
     inputDir,
     hotPixelMap,
     outputSettings,
+    isProcessing,
+    isVerifyingOutputDir,
     loadImageData,
-    saveImageData,
     saveImageToDirectory,
     saveImageToDirectorySafe,
     getOutputFormat,
@@ -412,7 +475,7 @@ export function ProcessingView() {
               </button>
 
               <button
-                onClick={() => setCancelled(true)}
+                onClick={handleCancelProcessing}
                 className="px-6 py-3 bg-red-600 hover:bg-red-500 rounded-lg font-medium"
               >
                 ✕ Cancel
@@ -421,12 +484,16 @@ export function ProcessingView() {
           ) : (
             <button
               onClick={handleProcess}
-              disabled={!isOutputDirSet}
+              disabled={!isOutputDirSet || isVerifyingOutputDir}
               className="flex-1 px-6 py-3 bg-cosmos-600 hover:bg-cosmos-500
                          disabled:bg-cosmos-800 disabled:cursor-not-allowed
                          rounded-lg font-semibold transition-colors"
             >
-              {!isOutputDirSet ? '📁 Select Output Directory First' : '🔧 Fix All Images'}
+              {!isOutputDirSet
+                ? '📁 Select Output Directory First'
+                : isVerifyingOutputDir
+                  ? '🔎 Verifying Output Folder...'
+                  : '🔧 Fix All Images'}
             </button>
           )}
         </div>
