@@ -148,6 +148,8 @@ export function BeforeAfterComparison({
   const effectiveBefore = beforeUrl ?? fallbackBeforeUrl ?? null;
   const effectiveAfter = afterUrl;
   const canCompare = !!(effectiveBefore && effectiveAfter);
+  const clampedSliderPct = clamp(sliderPct, 0, 100);
+  const visibleAfterPct = Math.round(100 - clampedSliderPct);
 
   const modes = useMemo(() => DEFAULT_MODES, []);
 
@@ -227,8 +229,8 @@ export function BeforeAfterComparison({
           aria-label="Before/after comparison slider"
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={Math.round(sliderPct)}
-          aria-valuetext={`${Math.round(sliderPct)}% after`}
+          aria-valuenow={visibleAfterPct}
+          aria-valuetext={`${visibleAfterPct}% after`}
           data-testid="before-after-slider"
         >
           <img
@@ -239,7 +241,7 @@ export function BeforeAfterComparison({
           />
           <div
             className="absolute inset-0 overflow-hidden pointer-events-none"
-            style={{ clipPath: `inset(0 0 0 ${clamp(sliderPct, 0, 100)}%)` }}
+            style={{ clipPath: `inset(0 0 0 ${clampedSliderPct}%)` }}
             data-testid="before-after-after-layer"
           >
             <img
@@ -251,11 +253,11 @@ export function BeforeAfterComparison({
           </div>
           <div
             className="absolute top-0 bottom-0 w-px bg-white/80 pointer-events-none"
-            style={{ left: `${clamp(sliderPct, 0, 100)}%` }}
+            style={{ left: `${clampedSliderPct}%` }}
           />
           <div
             className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center text-cosmos-900 text-xs font-bold pointer-events-none"
-            style={{ left: `${clamp(sliderPct, 0, 100)}%` }}
+            style={{ left: `${clampedSliderPct}%` }}
             aria-hidden="true"
           >
             ↔
