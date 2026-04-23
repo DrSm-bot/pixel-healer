@@ -8,6 +8,47 @@ function isSupportedImage(filename: string): boolean {
   return SUPPORTED_EXTENSIONS.some((ext) => lower.endsWith(ext));
 }
 
+type WritableHandle = Pick<FileSystemFileHandle, 'createWritable'>;
+
+function isInvalidStateError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'InvalidStateError';
+}
+
+async function writeBlobToHandle(handle: WritableHandle, blob: Blob): Promise<void> {
+  const writable = await handle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+}
+
+export async function writeBlobWithInvalidStateRecovery(
+  initialHandle: WritableHandle,
+  reacquireHandle: () => Promise<WritableHandle>,
+  blob: Blob,
+  fileName: string
+): Promise<void> {
+  try {
+    await writeBlobToHandle(initialHandle, blob);
+    return;
+  } catch (error) {
+    if (!isInvalidStateError(error)) {
+      throw error;
+    }
+  }
+
+  const freshHandle = await reacquireHandle();
+  try {
+    await writeBlobToHandle(freshHandle, blob);
+  } catch (retryError) {
+    if (isInvalidStateError(retryError)) {
+      throw new Error(
+        `Failed to save "${fileName}" after refreshing the file handle. ` +
+          'The file state is still invalid. Please try again and ensure no other program is modifying the file.'
+      );
+    }
+    throw retryError;
+  }
+}
+
 interface UseFileSystemReturn {
   /** Whether File System Access API is supported */
   isSupported: boolean;
@@ -249,38 +290,13 @@ export function useFileSystem(): UseFileSystemReturn {
         format === 'image/jpeg' ? { type: format, quality: 0.95 } : { type: format };
       const blob = await canvas.convertToBlob(options);
 
-      // Re-acquire handle from directory to ensure fresh state
-      // This prevents "InvalidStateError: state cached in interface object" errors
-      const fileHandle = await directory.getFileHandle(fileName, { create: true });
-
-      let lastError: Error | null = null;
-      // Retry once in case of transient errors
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const writable = await fileHandle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          return; // Success
-        } catch (err) {
-          lastError = err instanceof Error ? err : new Error(String(err));
-
-          // If this is a stale state error, re-acquire handle and retry
-          if (attempt === 0 && err instanceof DOMException && err.name === 'InvalidStateError') {
-            // Get a fresh handle for the retry
-            const freshHandle = await directory.getFileHandle(fileName, { create: true });
-            try {
-              const writable = await freshHandle.createWritable();
-              await writable.write(blob);
-              await writable.close();
-              return; // Success on retry with fresh handle
-            } catch (retryErr) {
-              lastError = retryErr instanceof Error ? retryErr : new Error(String(retryErr));
-            }
-          }
-        }
-      }
-
-      throw lastError || new Error('Failed to save image data');
+      const initialHandle = await directory.getFileHandle(fileName, { create: true });
+      await writeBlobWithInvalidStateRecovery(
+        initialHandle,
+        () => directory.getFileHandle(fileName, { create: true }),
+        blob,
+        fileName
+      );
     },
     []
   );
