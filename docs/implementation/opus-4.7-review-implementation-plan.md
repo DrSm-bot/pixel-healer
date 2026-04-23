@@ -2,21 +2,21 @@
 
 _Date: 2026-04-23_
 _Source: focused Opus 4.7 code review (no code changes in review run)_
+_Status: **COMPLETE** — All PRs merged_
 
 This document is the implementation playbook derived from the review output.
-Use it top-down. Do not start lower-priority work before **P0** is done.
 
 ---
 
-## 1) Execution Order (what to do first)
+## 1) Execution Order (completed)
 
-1. **PR-A (P0): I/O Safety Hardening**
-2. **PR-B (P0): Re-analyze State Correctness**
-3. **PR-C (P1): Processing UX/State robustness**
-4. **PR-D (P1/P2): Detection hardening + defaults centralization**
-5. **PR-E (P2): Maintainability cleanup**
+1. **PR-A (P0): I/O Safety Hardening** — ✅ Merged (#17, #20)
+2. **PR-B (P0): Re-analyze State Correctness** — ✅ Merged (#22)
+3. **PR-C (P1): Processing UX/State robustness** — ✅ Merged (#21)
+4. **PR-D (P1/P2): Detection hardening + defaults centralization** — ✅ Merged (#23)
+5. **PR-E (P2): Maintainability cleanup** — ✅ Merged (#24)
 
-Release gate recommendation from review: **PR-A + PR-B should be merged before public overwrite-heavy usage.**
+Release gate: **All P0 items merged and validated.**
 
 ---
 
@@ -157,20 +157,20 @@ Release gate recommendation from review: **PR-A + PR-B should be merged before p
 ## 4) Tracking Checklist
 
 ## P0
-- [ ] P0-1 overwrite retry flow fixed
-- [ ] P0-2 dead/misleading save path cleaned up
-- [ ] P0-3 re-analyze stale state cleared
+- [x] P0-1 overwrite retry flow fixed (#17, #20)
+- [x] P0-2 dead/misleading save path cleaned up (#17)
+- [x] P0-3 re-analyze stale state cleared (#22)
 
 ## P1
-- [ ] effect dependency cleanup in `ProcessingView`
-- [ ] process-loop cancellation/unmount safety
-- [ ] optional verify-output pending UX state
-- [ ] threshold bound normalization
+- [x] effect dependency cleanup in `ProcessingView` (#21)
+- [x] process-loop cancellation/unmount safety (#21)
+- [x] optional verify-output pending UX state (#21)
+- [x] threshold bound normalization (#23)
 
 ## P2
-- [ ] preset matching semantics documented/expanded
-- [ ] defaults centralized
-- [ ] AnalysisView split/refactor
+- [x] preset matching semantics documented/expanded (#23)
+- [x] defaults centralized (#23)
+- [x] AnalysisView split/refactor (#24)
 
 ---
 
@@ -197,7 +197,6 @@ Return:
 
 ---
 
-## 6) Suggested Next Action
+## 6) Completion Summary
 
-Start with **PR-A (I/O Safety Hardening)** immediately.
-That is the highest-risk area and the best risk-reduction per hour.
+All items from this review have been addressed and merged. The implementation plan is complete.

@@ -2,7 +2,7 @@
 
 *Browser-based hot pixel removal for astrophotography time-lapses*
 
-Last updated: 2026-04-22 (Detection tuning Steps 1–4b complete)
+Last updated: 2026-04-23 (Phase 3b Review UX complete)
 
 ## Problem Statement
 
@@ -84,20 +84,25 @@ Provide a free, privacy-first web app that:
 
 **Algorithm is now production-ready!**
 
-### 🚧 In Progress / Next (Phase 3b: Review UX)
+### ✅ Done (Phase 3b: Review UX)
 
-1. **Streamlined Sensitivity UI:** ✅
+1. **Streamlined Sensitivity UI:**
    - Low/Normal/High sensitivity presets
    - Expandable Advanced Settings section for parameter tuning
    - No mode switching required
 
-2. **Manual Pixel Editing:** (Next PR)
-   - Click to add/remove hot pixels
-   - Before/after comparison view
-   - Hot pixel coordinate list
+2. **Before/After Comparison:**
+   - Slider mode (drag to reveal repaired image)
+   - Toggle mode (click to flip between states)
+   - Side-by-side mode (responsive two-column layout)
+   - Keyboard navigation (arrow keys, Home/End)
 
-3. **Live Preview:** (Next PR)
-   - Real-time detection preview on parameter change
+3. **Manual Pixel Editing:**
+   - Click to add missed hot pixels
+   - Click to remove false positives
+   - Undo last edit
+   - Clear edit history (with confirmation)
+   - Statistics display (added/removed counts)
 
 ## Detection Parameters
 
@@ -180,12 +185,11 @@ const PRESETS = {
 ### Phase 3a: Synthetic Benchmark Harness ✅
 ### Detection Tuning (Steps 1-4b) ✅
 
-### Phase 3b: Review UX 🚧
-- [x] Sensitivity presets UI with expandable Advanced Settings (PR #15, #16)
-- [x] Manual add/remove hot pixels (click to toggle) — PR #25
-- [ ] Before/after comparison slider
-- [ ] Detection sensitivity tuning with live preview
-- [ ] Hot pixel list with coordinates
+### Phase 3b: Review UX ✅
+- [x] Sensitivity presets UI with expandable Advanced Settings (PR #15, #16, #24)
+- [x] Manual add/remove hot pixels with undo/reset (PR #25)
+- [x] Before/after comparison (slider, toggle, side-by-side) (PR #26)
+- [x] Hardened ProcessingView state and cancellation (PR #21)
 
 ### Phase 4: Performance + Polish
 - [ ] Expand worker usage for processing step
@@ -218,11 +222,11 @@ Users can:
 - [x] Handle sequences without crashing
 - [x] See processing statistics
 
-### Phase 3b Goals
+### Phase 3b Goals ✅ COMPLETE
 
-- [ ] User-friendly sensitivity controls (Low/Normal/High)
-- [ ] Manual pixel editing capability
-- [ ] Before/after visual comparison
+- [x] User-friendly sensitivity controls (Low/Normal/High)
+- [x] Manual pixel editing capability
+- [x] Before/after visual comparison
 
 ## PRs Merged
 
@@ -238,3 +242,10 @@ Users can:
 | #12 | Docs: Detection tuning status | ✅ Merged |
 | #13 | Detection Tuning Steps 1-3 | ✅ Merged |
 | #14 | Detection Tuning Steps 4a+4b (Contrast + Variance) | ✅ Merged |
+| #15-18 | Phase 3b: Streamline Analyze UI + File Handle Fixes | ✅ Merged |
+| #19-20 | Harden overwrite-safe file writes | ✅ Merged |
+| #21 | Harden ProcessingView state + cancellation | ✅ Merged |
+| #22-23 | Reset stale review state + detection bounds | ✅ Merged |
+| #24 | Refactor: Extract analysis advanced settings | ✅ Merged |
+| #25 | Manual hot pixel editing in review step | ✅ Merged |
+| #26 | Before/After comparison UI in review step | ✅ Merged |
